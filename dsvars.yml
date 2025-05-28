@@ -1,0 +1,3 @@
+username: "tomsmith"
+password: "{{ env.TEST_PASSWORD }}"
+url: "https://the-internet.herokuapp.com/login"

@@ -1,12 +1,11 @@
-import os
+from browser_use import Agent, BrowserSession, BrowserProfile
+from browser_use.controller.service import Controller
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
+from dotenv import load_dotenv
 import asyncio
 import argparse
-
-from browser_use.controller.service import Controller
-from dotenv import load_dotenv
-from pydantic import BaseModel
-from browser_use import Agent
-from langchain_openai import ChatOpenAI
+import os
 
 
 class Summary(BaseModel):
@@ -29,10 +28,21 @@ async def main():
     controller = Controller(output_model=Summary)
 
     model = ChatOpenAI(
-        model="gpt-4o", temperature=0.3, api_key=os.getenv("OPENAI_API_KEY")
+        model="gpt-4o",
+        temperature=0.3,
+        api_key=os.getenv("OPENAI_API_KEY"),
     )
 
-    agent = Agent(task=args.task, llm=model, controller=controller)
+    browser_session = BrowserSession(
+        headless=True, user_data_dir=None  # temporary profile for clean headless run
+    )
+
+    agent = Agent(
+        task=args.task,
+        llm=model,
+        controller=controller,
+        browser_session=browser_session,
+    )
 
     try:
         history = await agent.run()

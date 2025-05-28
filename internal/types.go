@@ -26,8 +26,3 @@ type ApiCall struct {
 	Headers map[string]string `yaml:"headers"`
 	Body    map[string]any    `yaml:"body"`
 }
-
-type SteelSession struct {
-	ID               string `json:"id"`
-	SessionViewerURL string `json:"session_viewer_url"`
-}

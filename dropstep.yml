@@ -2,11 +2,19 @@ name: sample workflow
 description: This is a sample workflow for testing the Dropstep CLI.
 
 inputs:
-  - name: infile
-    type: file
-    required: false
+  - name: username
+    type: string
+    required: true
+  - name: password
+    type: string
+    required: true
+  - name: url
+    type: string
+    required: true
 
 steps:
-  - id: sample_step
+  - id: aws login
     uses: browser
-    prompt: "Go to docs.steel.dev, open the changelog, and tell me what's new."
+    prompt: >
+      Go to {{url}} and log in using username {{username}} and password {{password}}.
+      Report what you see after you are logged in.
