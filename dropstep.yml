@@ -1,0 +1,12 @@
+name: sample workflow
+description: This is a sample workflow for testing the Dropstep CLI.
+
+inputs:
+  - name: infile
+    type: file
+    required: false
+
+steps:
+  - id: sample_step
+    uses: browser
+    prompt: "Go to docs.steel.dev, open the changelog, and tell me what's new."

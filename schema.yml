@@ -1,0 +1,20 @@
+name: string                # Human-readable workflow name
+description: string         # Optional summary of the workflow
+inputs:                     # Required user inputs
+  - name: string
+    type: string            # string | file | number | boolean
+    required: boolean
+
+steps:                      # Ordered list of steps
+  - id: string              # Unique step ID
+    uses: string            # 'browser' | 'shell' | 'api' | plugin ref
+    prompt: string          # (if uses: browser) prompt template
+    run: string             # (if uses: shell) command line
+    call:                   # (if uses: api)
+      method: string        # GET, POST, etc.
+      url: string
+      headers: map
+      body: map
+    if: string              # Optional condition (future: templated eval)
+    retry: int              # Optional retries
+    timeout: duration       # Optional per-step timeout (e.g. 30s)
