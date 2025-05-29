@@ -13,7 +13,7 @@ inputs:
     required: true
 
 steps:
-  - id: aws login
+  - id: test login
     uses: browser
     prompt: >
       Go to {{url}} and log in using username {{username}} and password {{password}}.
