@@ -7,14 +7,12 @@ from typing import Type, Optional, Dict, Any, List
 from pathlib import Path
 import tempfile
 from enum import Enum
-import sys # For sys.path manipulation with importlib
+import sys
 import importlib.util # For dynamic module loading
 
-# --- Third-party Imports ---
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
-# Pydantic imports
 from pydantic import BaseModel as PydanticBaseModel
 # No need to import Field, AnyUrl etc. here for get_pydantic_model_from_schema's direct use
 
@@ -26,12 +24,13 @@ from datamodel_code_generator import (
 )
 
 # Default Summary model (used if no schema is provided or generation fails)
-class Summary(PydanticBaseModel): # Use aliased BaseModel
+class Summary(PydanticBaseModel):
     summary: str
 
 
 # --- Custom Actions ---
-async def upload_file_action( # This is the implementation
+
+async def upload_file_action(
     index: int,
     path: str,
     browser_session: BrowserSession,
@@ -54,6 +53,7 @@ async def upload_file_action( # This is the implementation
         return ActionResult(extracted_content=f"Successfully uploaded file “{path}” to element at index {index}.", include_in_memory=True)
     except Exception as e:
         return ActionResult(error=f"Failed to upload file “{path}” at index {index}: {str(e)}")
+
 # --- End Custom Actions ---
 
 
@@ -103,10 +103,10 @@ def get_pydantic_model_from_schema(
                 input_filename="schema.json", # Dummy for string input
                 output=output_path,
                 output_model_type=DataModelType.PydanticV2BaseModel,
-                class_name=model_name, # Important: class_name for datamodel-code-generator
+                class_name=model_name,
             )
-            model_code = output_path.read_text() # For debugging, not strictly needed for importlib
-            print(f"--- Generated Pydantic Model Code ({model_name}) ---\n{model_code}\n---------------------------------------")
+            model_code = output_path.read_text()
+            print(f"--- Generated Pydantic Model Code ({model_name}) ---\n{model_code}---------------------------------------\n")
 
             # Add the temporary directory to sys.path to allow importing the generated module
             if temp_dir not in sys.path:
@@ -178,13 +178,9 @@ async def main():
     args = parse_args()
     load_dotenv()
 
-    print(f"DEBUG: Received --output-schema: {args.output_schema}")
-    print(f"DEBUG: Received --model-name: {args.model_name}")
-
-    output_model_class: Type[PydanticBaseModel] = Summary  # Default using aliased PydanticBaseModel
+    output_model_class: Type[PydanticBaseModel] = Summary  # Default
     if args.output_schema:
         try:
-            # Basic check if output_schema is valid JSON before passing to generator
             json.loads(args.output_schema)
             output_model_class = get_pydantic_model_from_schema(
                 args.output_schema, args.model_name
@@ -204,11 +200,10 @@ async def main():
     controller = Controller(output_model=output_model_class)
 
     # Register custom actions with the controller instance
-    # The first argument to controller.action() is the description for the LLM.
     action_decorator = controller.action(
         "Uploads a file from the host system to a file input element on the current webpage. Requires the index of the file input element and the path of the file (from available_file_paths) to upload."
     )
-    action_decorator(upload_file_action) # Registers upload_file_action with the name 'upload_file_action'
+    action_decorator(upload_file_action)
 
     llm_instance = ChatOpenAI(
         model="gpt-4o",
@@ -216,20 +211,20 @@ async def main():
         api_key=os.getenv("OPENAI_API_KEY"),
     )
 
-    # Consider making headless configurable via an arg if you switch between local dev and CI
+    # Consider making headless configurable via an arg 
     browser_session = BrowserSession(headless=True, user_data_dir=None) 
 
     agent = Agent(
         task=args.prompt,
         llm=llm_instance,
-        controller=controller, # This controller has the dynamic output_model and registered action
+        controller=controller,
         browser_session=browser_session,
         available_file_paths=args.upload_file_paths,
     )
 
     try:
         history = await agent.run()
-        result_json = history.final_result() # Should conform to output_model_class
+        result_json = history.final_result()
 
         os.makedirs(os.path.dirname(args.out), exist_ok=True)
         with open(args.out, "w", encoding="utf-8") as f:
