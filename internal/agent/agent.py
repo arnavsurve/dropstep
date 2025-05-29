@@ -1,4 +1,5 @@
-from browser_use import Agent, BrowserSession, BrowserProfile
+from browser_use import Agent, BrowserSession
+from browser_use.agent.views import ActionResult
 from browser_use.controller.service import Controller
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
@@ -26,6 +27,25 @@ async def main():
     load_dotenv()
 
     controller = Controller(output_model=Summary)
+
+    @controller.action("Upload file to interactive element with file path ")
+    async def upload_file(
+        index: int,
+        path: str,
+        browser_session: BrowserSession,
+        available_file_paths: list[str],
+    ):
+        if path not in available_file_paths:
+            return ActionResult(error=f"File path {path} is not in the allowed list")
+        el_info = await browser_session.find_file_upload_element_by_index(index)
+        if not el_info:
+            return ActionResult(error=f"No file-upload element at index {index}")
+        handle = await browser_session.get_locate_element(el_info)
+        try:
+            await handle.set_input_files(path)
+            return ActionResult(extracted_content=f"Uploaded “{path}” at index {index}")
+        except Exception as e:
+            return ActionResult(error=str(e))
 
     model = ChatOpenAI(
         model="gpt-4o",

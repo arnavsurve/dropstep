@@ -10,11 +10,17 @@ import (
 	"github.com/arnavsurve/dropstep/internal/agent"
 )
 
-type BrowserHandler struct{}
+type BrowserHandler struct {
+	Agent agent.AgentRunner
+}
 
 func init() {
 	RegisterHandlerFactory("browser", func() Handler {
-		return &BrowserHandler{}
+		return &BrowserHandler{
+			Agent: &agent.SubprocessAgentRunner{
+				ScriptPath: "internal/agent/run.sh",
+			},
+		}
 	})
 }
 
@@ -30,11 +36,11 @@ func (bh *BrowserHandler) Run(step internal.Step) error {
 
 	outputPath := fmt.Sprintf("output/%s_output.json", step.ID)
 
-	jsonData, runErr := agent.RunAgent(step.Prompt, outputPath)
+	jsonData, runErr := bh.Agent.RunAgent(step.Prompt, outputPath)
 	if runErr != nil {
-		log.Printf("step %s failed: %v\n", step.ID, runErr)
+		log.Printf("Step '%s' failed: %v\n", step.ID, runErr)
 	} else {
-		log.Printf("completed step %s", step.ID)
+		log.Printf("Completed step '%s'", step.ID)
 		if jsonData != nil {
 			var outputData map[string]any
 			if parseErr := json.Unmarshal(jsonData, &outputData); parseErr != nil {
