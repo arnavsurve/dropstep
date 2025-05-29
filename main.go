@@ -38,18 +38,21 @@ func main() {
 	for _, step := range wf.Steps {
 		fmt.Printf("==> Running step %q (uses=%s)\n", step.ID, step.Uses)
 
-		handler, err := handlers.GetHandler(step.Uses)
+		ctx := internal.ExecutionContext{
+			Step: step,
+			// logger, db conn goes here
+		}
+
+		handler, err := handlers.GetHandler(ctx)
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
 
-		err = handler.Validate(step)
-		if err != nil {
+		if err = handler.Validate(); err != nil {
 			log.Fatalf("Error validating step %q: %v", step.ID, err)
 		}
 
-		err = handler.Run(step)
-		if err != nil {
+		if err = handler.Run(); err != nil {
 			log.Fatalf("Error running step %q: %v", step.ID, err)
 		}
 	}

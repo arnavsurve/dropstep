@@ -3,9 +3,11 @@ package agent
 import (
 	"bufio"
 	"fmt"
+	"github.com/arnavsurve/dropstep/internal"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 )
 
@@ -13,8 +15,22 @@ type SubprocessAgentRunner struct {
 	ScriptPath string
 }
 
-func (s *SubprocessAgentRunner) RunAgent(prompt string, outputPath string) ([]byte, error) {
-	cmd := exec.Command(s.ScriptPath, "--task", prompt, "--out", outputPath)
+func (s *SubprocessAgentRunner) RunAgent(prompt, outputPath string, filesToUpload []internal.FileToUpload) ([]byte, error) {
+	cmdArgs := []string{"--prompt", prompt, "--out", outputPath}
+
+	if len(filesToUpload) > 0 {
+		cmdArgs = append(cmdArgs, "--upload-file-paths")
+
+		for _, f := range filesToUpload {
+			absPath, err := filepath.Abs(f.Path)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get absolute path for %s: %w", f.Path, err)
+			}
+			cmdArgs = append(cmdArgs, absPath)
+		}
+	}
+
+	cmd := exec.Command(s.ScriptPath, cmdArgs...)
 	cmd.Env = append(os.Environ(),
 		"OPENAI_API_KEY="+os.Getenv("OPENAI_API_KEY"),
 	)

@@ -14,15 +14,27 @@ type Input struct {
 }
 
 type Step struct {
-	ID     string   `yaml:"id"`
-	Uses   string   `yaml:"uses"`             // 'browser' | 'shell' | 'api'
-	Prompt string   `yaml:"prompt,omitempty"` // if (uses: browser) prompt template
-	Run    string   `yaml:"run"`              // (if uses: shell) command line
-	Call   *ApiCall `yaml:"call"`             // (if uses: api)
+	ID          string         `yaml:"id"`
+	Uses        string         `yaml:"uses"`                   // 'browser' | 'shell' | 'api'
+	Prompt      string         `yaml:"prompt,omitempty"`       // if (uses: browser) prompt template
+	Run         string         `yaml:"run"`                    // (if uses: shell) command line
+	Call        *ApiCall       `yaml:"call"`                   // (if uses: api)
+	UploadFiles []FileToUpload `yaml:"upload_files,omitempty"` // (if uses: browser) files to upload
 }
+
 type ApiCall struct {
 	Method  string            `yaml:"method"`
 	Url     string            `yaml:"url"`
 	Headers map[string]string `yaml:"headers"`
 	Body    map[string]any    `yaml:"body"`
+}
+
+type FileToUpload struct {
+	Name string `yaml:"name"`
+	Path string `yaml:"path"`
+}
+
+type ExecutionContext struct {
+	Step Step
+	// Include logger, DB conn here
 }

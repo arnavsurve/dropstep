@@ -11,32 +11,36 @@ import (
 )
 
 type BrowserHandler struct {
-	Agent agent.AgentRunner
+	Agent   agent.AgentRunner
+	StepCtx internal.ExecutionContext
 }
 
 func init() {
-	RegisterHandlerFactory("browser", func() Handler {
+	RegisterHandlerFactory("browser", func(ctx internal.ExecutionContext) Handler {
 		return &BrowserHandler{
 			Agent: &agent.SubprocessAgentRunner{
 				ScriptPath: "internal/agent/run.sh",
 			},
+			StepCtx: ctx,
 		}
 	})
 }
 
-func (bh *BrowserHandler) Validate(step internal.Step) error {
+func (bh *BrowserHandler) Validate() error {
+	step := bh.StepCtx.Step
 	fmt.Printf("(Placeholder) - validating %s\n", step.ID)
 	return nil
 }
 
-func (bh *BrowserHandler) Run(step internal.Step) error {
+func (bh *BrowserHandler) Run() error {
 	if err := os.MkdirAll("output", 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %v", err)
 	}
 
-	outputPath := fmt.Sprintf("output/%s_output.json", step.ID)
+	step := bh.StepCtx.Step
 
-	jsonData, runErr := bh.Agent.RunAgent(step.Prompt, outputPath)
+	outputPath := fmt.Sprintf("output/%s_output.json", step.ID)
+	jsonData, runErr := bh.Agent.RunAgent(step.Prompt, outputPath, step.UploadFiles)
 	if runErr != nil {
 		log.Printf("Step '%s' failed: %v\n", step.ID, runErr)
 	} else {

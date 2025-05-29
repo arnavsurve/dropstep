@@ -91,6 +91,19 @@ func InjectVarsIntoWorkflow(wf *Workflow, varCtx VarContext) (*Workflow, error) 
 			if err != nil {
 				return nil, fmt.Errorf("injecting vars into prompt of step %q: %w", s.ID, err)
 			}
+
+			if len(s.UploadFiles) > 0 {
+				updatedUploadFiles := make([]FileToUpload, len(s.UploadFiles))
+				for j, fu := range s.UploadFiles {
+					updatedFile := fu
+					updatedFile.Path, err = replace(fu.Path)
+					if err != nil {
+						return nil, fmt.Errorf("injecting vars into upload_files path of step %q: %w", s.ID, err)
+					}
+					updatedUploadFiles[j] = updatedFile
+				}
+				s.UploadFiles = updatedUploadFiles
+			}
 		}
 
 		// shell run

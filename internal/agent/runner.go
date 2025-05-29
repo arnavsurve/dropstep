@@ -1,5 +1,7 @@
 package agent
 
+import "github.com/arnavsurve/dropstep/internal"
+
 type AgentRunner interface {
-	RunAgent(prompt string, outputPath string) ([]byte, error)
+	RunAgent(prompt, outputPath string, filesToUpload []internal.FileToUpload) ([]byte, error)
 }

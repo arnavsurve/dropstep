@@ -11,10 +11,21 @@ inputs:
   - name: url
     type: string
     required: true
+  - name: image1
+    type: string
+    required: true
+  - name: image2
+    type: string
+    required: true
 
 steps:
-  - id: test login
+  - id: test file upload
     uses: browser
     prompt: >
-      Go to {{url}} and log in using username {{username}} and password {{password}}.
-      Report what you see after you are logged in.
+      Go to {{url}} and upload the file {{ image1 }} to the standard HTML form upload.
+      Upload {{ image2 }} to the ajax file upload and uppy upload.
+    upload_files:
+      - name: image1
+        path: "{{ image1 }}"
+      - name: image2
+        path: "{{ image2 }}"
