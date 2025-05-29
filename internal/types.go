@@ -14,12 +14,13 @@ type Input struct {
 }
 
 type Step struct {
-	ID          string         `yaml:"id"`
-	Uses        string         `yaml:"uses"`                   // 'browser' | 'shell' | 'api'
-	Prompt      string         `yaml:"prompt,omitempty"`       // if (uses: browser) prompt template
-	Run         string         `yaml:"run"`                    // (if uses: shell) command line
-	Call        *ApiCall       `yaml:"call"`                   // (if uses: api)
-	UploadFiles []FileToUpload `yaml:"upload_files,omitempty"` // (if uses: browser) files to upload
+	ID               string         `yaml:"id"`
+	Uses             string         `yaml:"uses"`                   // 'browser' | 'shell' | 'api'
+	Prompt           string         `yaml:"prompt,omitempty"`       // if (uses: browser) prompt template
+	Run              string         `yaml:"run,omitempty"`          // (if uses: shell) command line
+	Call             *ApiCall       `yaml:"call,omitempty"`         // (if uses: api)
+	UploadFiles      []FileToUpload `yaml:"upload_files,omitempty"` // (if uses: browser) files to upload
+	OutputSchemaFile string         `yaml:"output_schema,omitempty"`
 }
 
 type ApiCall struct {

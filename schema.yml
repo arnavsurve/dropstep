@@ -12,6 +12,7 @@ steps:                      # Ordered list of steps
     upload_files:           # (if uses: browser) files to upload
       - name: string
         path: string
+    output_schema: string   # (if uses: browser) JSON schema for LLM structured output
     run: string             # (if uses: shell) command line
     call:                   # (if uses: api)
       method: string        # GET, POST, etc.

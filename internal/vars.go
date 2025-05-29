@@ -213,6 +213,15 @@ func InjectVarsIntoWorkflow(wf *Workflow, globalVarCtx VarContext) (*Workflow, e
 			return nil, fmt.Errorf("step %q (%s): %w", s.ID, s.Uses, err)
 		}
 
+		// Resolve path for OutputSchemaFile using global context
+		if s.OutputSchemaFile != "" {
+			resolvedSchemaPath, pathErr := resolver.Resolve(s.OutputSchemaFile, "global", "output schema file path")
+			if pathErr != nil {
+				return nil, fmt.Errorf("step %q (%s): %w", s.ID, s.Uses, pathErr)
+			}
+			s.OutputSchemaFile = resolvedSchemaPath // Update the step's copy with the resolved path
+		}
+
 		if s.Call != nil {
 			// Work on a copy of ApiCall to avoid modifying the original step's Call pointer directly
 			// if the original step was part of a shared slice or map elsewhere.

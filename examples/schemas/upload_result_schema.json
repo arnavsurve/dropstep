@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FileUploadResult",
+  "description": "Schema for the result of a file upload task, including a summary and the download link.",
+  "type": "object",
+  "properties": {
+    "summaryOfActions": {
+      "type": "string",
+      "description": "A brief summary of the key steps taken by the agent to upload the file and find the link (e.g., navigated to URL, located upload button, uploaded file, extracted link)."
+    },
+    "downloadLink": {
+      "type": "string",
+      "description": "The direct download URL for the successfully uploaded file, as found on the page."
+    },
+    "fileNameUploaded": {
+      "type": "string",
+      "description": "The name of the file that was uploaded (e.g., 'resume.pdf'). This should be the basename of the file path used for upload."
+    },
+    "uploadStatusMessage": {
+      "type": "string",
+      "description": "Any status message related to the upload observed on the page (e.g., 'Upload complete', 'File processed'). Optional."
+    }
+  },
+  "required": ["summaryOfActions", "downloadLink", "fileNameUploaded"]
+}
