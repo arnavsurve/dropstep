@@ -22,10 +22,10 @@ steps:
   - id: test file upload
     uses: browser
     prompt: >
-      Go to {{url}} and upload the file {{ image1 }} to the standard HTML form upload.
-      Upload {{ image2 }} to the ajax file upload and uppy upload.
+      Go to {{url}} and upload the file {{ imageasdf1 }} to the standard HTML form upload.
+      Upload {{ imageasdf2 }} to the ajax file upload and uppy upload.
     upload_files:
-      - name: image1
+      - name: imageasdf1
         path: "{{ image1 }}"
-      - name: image2
+      - name: imageasdf2
         path: "{{ image2 }}"
