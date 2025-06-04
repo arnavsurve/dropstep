@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
-set -e # Exit immediately if a command exits with a non-zero status.
+set -e -x # Enable debug printing for bash itself
 
-# DROPSTEP_VENV_PYTHON should be like /path/to/cache/dropstep_agent_venv/bin/python
-# DROPSTEP_AGENT_PY_PATH should be like /path/to/temp_run_dir/agent.py
+SCRIPT_DIR_WHERE_RUN_SH_IS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+echo "--- run.sh ---"
+echo "BASH_SOURCE[0]=${BASH_SOURCE[0]}"
+echo "dirname of BASH_SOURCE[0]=$(dirname "${BASH_SOURCE[0]}")"
+echo "SCRIPT_DIR_WHERE_RUN_SH_IS=$SCRIPT_DIR_WHERE_RUN_SH_IS"
+echo "DROPSTEP_VENV_PYTHON=$DROPSTEP_VENV_PYTHON"
+echo "Arguments received by run.sh: $@"
+echo "--- end run.sh initial prints ---"
 
-if [ -z "$DROPSTEP_VENV_PYTHON" ]; then
-  echo "Error: DROPSTEP_VENV_PYTHON environment variable is not set." >&2
-  exit 1
-fi
+cd "$SCRIPT_DIR_WHERE_RUN_SH_IS" # CD in the main shell of the script
+echo "Changed CWD to: $(pwd)"
+echo "Listing files in CWD:"
+ls -la # List files to confirm main.py is here
 
-if [ -z "$DROPSTEP_AGENT_PY_PATH" ]; then
-  echo "Error: DROPSTEP_AGENT_PY_PATH environment variable is not set." >&2
-  exit 1
-fi
-
-echo "Using Python interpreter: $DROPSTEP_VENV_PYTHON"
-echo "Running agent script: $DROPSTEP_AGENT_PY_PATH"
-
-# Execute agent.py using the specific python from the venv
-"$DROPSTEP_VENV_PYTHON" "$DROPSTEP_AGENT_PY_PATH" "$@"
+echo "Executing: $DROPSTEP_VENV_PYTHON main.py $@"
+"$DROPSTEP_VENV_PYTHON" "main.py" "$@"
+echo "Python script finished."

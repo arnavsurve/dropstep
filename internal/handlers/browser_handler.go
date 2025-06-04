@@ -95,7 +95,7 @@ func (bh *BrowserHandler) Run() error {
 	}
 
 	agentOutputPath := fmt.Sprintf("output/%s_output.json", step.ID)
-	jsonData, runErr := bh.Agent.RunAgent(step.Prompt, agentOutputPath, step.UploadFiles, outputSchemaJSONString, step.TargetDownloadDir)
+	jsonData, runErr := bh.Agent.RunAgent(step.Prompt, agentOutputPath, step.UploadFiles, outputSchemaJSONString, finalTargetDownloadDir)
 	if runErr != nil {
 		log.Printf("Step '%s' agent execution failed: %v\n", step.ID, runErr)
 	} else {

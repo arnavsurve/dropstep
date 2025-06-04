@@ -151,7 +151,15 @@ func (s *SubprocessAgentRunner) RunAgent(
 	}()
 
 	// Extract embedded scripts to the temporary run directory
-	scriptsToExtract := []string{agentassets.RunScriptFile, agentassets.AgentPyFile}
+	scriptsToExtract := []string{
+		agentassets.RunScriptFile, 
+		agentassets.MainPyFile,
+		agentassets.CliPyFile,
+		agentassets.ModelsPyFile,
+		agentassets.ActionsPyFile,
+		agentassets.SettingsPyFile,
+		agentassets.InitPyFile,
+	}
 	for _, scriptName := range scriptsToExtract {
 		content, err := agentassets.GetAgentScriptContent(scriptName)
 		if err != nil {
@@ -187,12 +195,8 @@ func (s *SubprocessAgentRunner) RunAgent(
 	cmd.Env = append(os.Environ(),
 		"OPENAI_API_KEY="+os.Getenv("OPENAI_API_KEY"),
 		"DROPSTEP_VENV_PYTHON="+s.venvPythonPath,
-		"DROPSTEP_AGENT_PY_PATH="+filepath.Join(runTempDir, agentassets.AgentPyFile),
+		"DROPSTEP_AGENT_PY_PATH="+filepath.Join(runTempDir, agentassets.MainPyFile),
 	)
-
-	// The command will run in the context of the OS, not within runTempDir CWD by default.
-	// If run.sh relies on CWD to find agent.py, set cmd.Dir
-	// cmd.Dir = runTempDir // Often a good idea
 
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()

@@ -3,3 +3,5 @@
 .idea/
 output/
 downloads/
+**/.claude/
+**/__pycache__/

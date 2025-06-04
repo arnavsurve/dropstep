@@ -11,10 +11,15 @@ var agentScriptsFS embed.FS
 
 // Define constants for the paths within the embedded filesystem
 const (
-	agentDirInEmbed  = "agent_scripts" // This is the directory name used in go:embed
-	RunScriptFile    = "run.sh"
-	AgentPyFile      = "agent.py"
-	RequirementsFile = "requirements.txt"
+	agentDirInEmbed     = "agent_scripts" // Directory name used in go:embed
+	RunScriptFile       = "run.sh"
+	MainPyFile          = "main.py"
+	CliPyFile           = "cli.py"
+	ModelsPyFile        = "models.py"
+	ActionsPyFile       = "actions.py"
+	SettingsPyFile      = "settings.py"
+	InitPyFile          = "__init__.py"
+	RequirementsFile    = "requirements.txt"
 )
 
 // GetAgentScriptContent returns the content of a specific script file from the embedded FS.
