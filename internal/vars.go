@@ -2,12 +2,13 @@ package internal
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"log"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // VarContext holds resolved input variables
@@ -68,14 +69,14 @@ func ResolveVarfile(path string) (VarContext, error) {
 // It manages different contexts (global, prompt-specific) for variable lookup.
 type stepVariableResolver struct {
 	globalContext       VarContext
-	promptContext       VarContext     // Includes global + upload file names as vars
-	resolvedUploadFiles []FileToUpload // Stores upload files with their paths resolved
+	promptContext       VarContext
+	resolvedUploadFiles []FileToUpload
 }
 
 // newStepVariableResolver creates and initializes a resolver for a given step.
 // It resolves paths in `originalUploadFiles` using `globalCtx` and then builds
 // the `promptContext`.
-func newStepVariableResolver(globalCtx VarContext, originalUploadFiles []FileToUpload) (*stepVariableResolver, error) {
+func newStepVariableResolver(globalCtx VarContext, stepID string, originalUploadFiles []FileToUpload) (*stepVariableResolver, error) {
 	// Resolve paths in UploadFiles using the globalContext
 	resolvedUploads := make([]FileToUpload, len(originalUploadFiles))
 	for i, fu := range originalUploadFiles {
@@ -101,7 +102,7 @@ func newStepVariableResolver(globalCtx VarContext, originalUploadFiles []FileToU
 			continue
 		}
 		if _, exists := promptCtx[fu.Name]; exists {
-			log.Printf("Warning: Upload file name '%s' overrides an existing global variable in prompt context.", fu.Name)
+			log.Printf("Warning: Upload file name '%s' in step '%s' overrides an existing global variable in prompt context.", fu.Name, stepID)
 		}
 		promptCtx[fu.Name] = fu.Path
 	}
@@ -136,6 +137,7 @@ func (r *stepVariableResolver) Resolve(input string, contextType string, fieldDe
 func (r *stepVariableResolver) GetResolvedUploadFiles() []FileToUpload {
 	return r.resolvedUploadFiles
 }
+
 
 // resolveStringVariables is the core function for replacing {{varName}} placeholders in a string
 // using the provided context. It returns an error if any variable is undefined.
@@ -190,11 +192,10 @@ func InjectVarsIntoWorkflow(wf *Workflow, globalVarCtx VarContext) (*Workflow, e
 
 	for i, step := range wf.Steps {
 		s := step // Work on a copy of the current step
-		var err error
 
 		// 1. Create a variable resolver for this specific step.
 		// This resolver internally handles resolving upload file paths and building the prompt context.
-		resolver, err := newStepVariableResolver(globalVarCtx, s.UploadFiles)
+		resolver, err := newStepVariableResolver(globalVarCtx, s.ID, s.UploadFiles)
 		if err != nil {
 			return nil, fmt.Errorf("step %q (%s): failed to initialize variable resolver: %w", s.ID, s.Uses, err)
 		}
@@ -205,7 +206,14 @@ func InjectVarsIntoWorkflow(wf *Workflow, globalVarCtx VarContext) (*Workflow, e
 			return nil, fmt.Errorf("step %q (%s): %w", s.ID, s.Uses, err)
 		}
 
-		// Update the step's UploadFiles with the versions that have resolved paths.
+		// Resolve TargetDownloadDir
+		if s.TargetDownloadDir != "" {
+			s.TargetDownloadDir, err = resolver.Resolve(s.TargetDownloadDir, "global", "target download directory")
+			if err != nil {
+				return nil, fmt.Errorf("step %q (%s): resolving target_download_dir: %w", s.ID, s.Uses, err)
+			}
+		}
+
 		s.UploadFiles = resolver.GetResolvedUploadFiles()
 
 		s.Run, err = resolver.Resolve(s.Run, "global", "shell command")

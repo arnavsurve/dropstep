@@ -20,6 +20,7 @@ type Step struct {
 	Run              string         `yaml:"run,omitempty"`          // (if uses: shell) command line
 	Call             *ApiCall       `yaml:"call,omitempty"`         // (if uses: api)
 	UploadFiles      []FileToUpload `yaml:"upload_files,omitempty"` // (if uses: browser) files to upload
+	TargetDownloadDir string 		`yaml:"download_dir,omitempty"` // (if uses: browser) target directory to place downloaded files 
 	OutputSchemaFile string         `yaml:"output_schema,omitempty"`
 }
 

@@ -10,17 +10,11 @@ inputs:
     required: true
 
 steps:
-  - id: test_file_upload_and_get_link
+  - id: test_file_download
     uses: browser
-    prompt: >
-      Go to {{url}} and upload the file referenced as {{resume}}.
-      After the upload is successful, examine the page for a download link for the uploaded file.
-      Your final output should include:
-      1. A summary of your actions.
-      2. The exact download link made available after uploading the file.
-      3. The name of the file you uploaded.
-      4. Any status message related to the upload.
+    prompt: Go to {{url}} and download sample1.txt.
     upload_files:
       - name: resume
         path: "{{ resume_path }}"
-    output_schema: "./schemas/upload_result_schema.json"
+    download_dir: "./downloads/"
+    # output_schema: "./schemas/upload_result_schema.json"

@@ -1,0 +1,16 @@
+{
+  "title": "DownloadSchema",
+  "type": "object",
+  "properties": {
+    "taskSummary": { "type": "string" },
+    "downloadedFileName": {
+      "type": "string",
+      "description": "The actual filename of the downloaded file."
+    },
+    "fileLocationOnDisk": {
+      "type": "string",
+      "description": "The full path where the file was saved."
+    }
+  },
+  "required": ["taskSummary", "downloadedFileName", "fileLocationOnDisk"]
+}

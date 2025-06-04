@@ -1,6 +1,6 @@
 username: "tomsmith"
 password: "{{ env.TEST_PASSWORD }}"
-url: "https://tus.io/demo"
+url: "https://www.filesampleshub.com/format/document/txt"
 resume_path: "/Users/asurve/Dropbox/resume/arnav-surve-resume.pdf"
 image1: "/Users/asurve/Desktop/Grace_Murray_Hopper_in_her_office_in_Washington_DC_1978_©Lynn_Gilbert copy.jpg"
 image2: "/Users/asurve/Desktop/Selfie 2025-03-29 at 17.32.28.png"

@@ -137,6 +137,7 @@ func (s *SubprocessAgentRunner) RunAgent(
 	outputPath string,
 	filesToUpload []internal.FileToUpload,
 	schemaContent string,
+	targetDownloadDir string,
 ) ([]byte, error) {
 	// Create a temporary directory for this specific agent run to place scripts
 	runTempDir, err := os.MkdirTemp(s.agentWorkDir, "agentrun-*")
@@ -175,6 +176,11 @@ func (s *SubprocessAgentRunner) RunAgent(
 	}
 	if schemaContent != "" {
 		cmdArgs = append(cmdArgs, "--output-schema", schemaContent)
+	}
+	if targetDownloadDir != "" {
+		cmdArgs = append(cmdArgs, "--target-download-dir", targetDownloadDir)
+	} else {
+		cmdArgs = append(cmdArgs, "--target-download-dir", "./output/")
 	}
 
 	cmd := exec.Command(extractedRunScriptPath, cmdArgs...)
@@ -215,7 +221,6 @@ func streamOutput(r io.Reader, w io.Writer, wg *sync.WaitGroup, prefix string) {
 	defer wg.Done()
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
-		// You could add a prefix here if you want to distinguish agent stdout/stderr
 		fmt.Fprintf(w, "[%s] %s\n", prefix, scanner.Text())
 	}
 	if err := scanner.Err(); err != nil && err != io.EOF {
