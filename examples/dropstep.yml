@@ -17,4 +17,4 @@ steps:
       - name: resume
         path: "{{ resume_path }}"
     download_dir: "./downloads/"
-    # output_schema: "./schemas/upload_result_schema.json"
+    output_schema: "./schemas/download_schema.json"

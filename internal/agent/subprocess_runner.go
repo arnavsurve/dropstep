@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/arnavsurve/dropstep/internal"
@@ -134,7 +135,7 @@ func NewSubprocessAgentRunner() (*SubprocessAgentRunner, error) {
 
 func (s *SubprocessAgentRunner) RunAgent(
 	prompt,
-	outputPath string,
+	rawOutputPath string,
 	filesToUpload []internal.FileToUpload,
 	schemaContent string,
 	targetDownloadDir string,
@@ -172,6 +173,12 @@ func (s *SubprocessAgentRunner) RunAgent(
 	}
 
 	extractedRunScriptPath := filepath.Join(runTempDir, agentassets.RunScriptFile)
+
+	outputPath, err := filepath.Abs(rawOutputPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get absolte path for output file %s: %v", rawOutputPath, err)
+	}
+	log.Printf("Agent output will be written to absolute path: %s", outputPath)
 
 	cmdArgs := []string{"--prompt", prompt, "--out", outputPath}
 	if len(filesToUpload) > 0 {
@@ -211,6 +218,7 @@ func (s *SubprocessAgentRunner) RunAgent(
 
 	waitErr := cmd.Wait()
 	wg.Wait()
+
 	if waitErr != nil {
 		return nil, fmt.Errorf("agent script %s failed: %w", extractedRunScriptPath, waitErr)
 	}
@@ -227,7 +235,10 @@ func streamOutput(r io.Reader, w io.Writer, wg *sync.WaitGroup, prefix string) {
 	for scanner.Scan() {
 		fmt.Fprintf(w, "[%s] %s\n", prefix, scanner.Text())
 	}
-	if err := scanner.Err(); err != nil && err != io.EOF {
-		fmt.Fprintf(os.Stderr, "Error reading stream for %s: %v\n", prefix, err)
+	err := scanner.Err()
+	if err != nil && err != io.EOF {
+		if !strings.Contains(err.Error(), "file already closed") {
+			fmt.Fprintf(os.Stderr, "Error reading stream for %s: %v\n", prefix, err)
+		}
 	}
 }

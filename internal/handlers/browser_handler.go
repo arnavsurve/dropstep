@@ -105,7 +105,13 @@ func (bh *BrowserHandler) Run() error {
 			if parseErr := json.Unmarshal(jsonData, &outputData); parseErr != nil {
 				log.Printf("Error parsing JSON output for step %s: %v", step.ID, parseErr)
 			} else {
-				fmt.Printf("Parsed agent output for step %s: %+v\n", step.ID, outputData)
+				prettyOutput, err := json.MarshalIndent(outputData, "", "  ")
+				if err != nil {
+					log.Printf("Error pretty-printing agent output for step %s: %v", step.ID, err)
+					fmt.Printf("Parsed agent output for step %s (raw): %+v\n", step.ID, outputData)
+				} else {
+					fmt.Printf("Parsed agent output for step %s:\n%s\n", step.ID, string(prettyOutput))
+				}
 			}
 		} else {
 			fmt.Printf("No JSON output received for step %s.\n", step.ID)

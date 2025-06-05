@@ -19,7 +19,6 @@ def create_browser_profile(target_download_dir_str: Optional[str], user_data_dir
     if target_download_dir_str:
         abs_target_download_dir = os.path.abspath(target_download_dir_str)
         profile_args["downloads_dir"] = abs_target_download_dir
-        print(f"DEBUG: Configuring BrowserProfile with downloads_dir: {abs_target_download_dir}")
     else:
         # This case should be handled by the caller (main_agent.py) ensuring a dir is always passed
         print("CRITICAL ERROR: target_download_dir not provided for BrowserProfile creation!")

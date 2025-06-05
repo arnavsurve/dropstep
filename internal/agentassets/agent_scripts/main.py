@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from pathlib import Path
 from typing import Type
 
@@ -19,8 +20,6 @@ async def run_agent_logic():
     browser_profile_obj = settings.create_browser_profile(args.target_download_dir, user_data_dir=None)
 
     settings.load_environment()
-
-    print(f"DEBUG: Received --prompt: {args.prompt}")
 
     output_model_class: Type[PydanticBaseModel] = models.Summary
     if args.output_schema:
@@ -58,7 +57,6 @@ async def run_agent_logic():
         api_key=api_key,
     )
 
-    browser_profile_obj = settings.create_browser_profile(args.target_download_dir, user_data_dir=None)
     browser_session = BrowserSession(
         headless=False,
         browser_profile=browser_profile_obj
@@ -82,6 +80,11 @@ async def run_agent_logic():
             output_file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(output_file_path, "w", encoding="utf-8") as f:
                 f.write(result_json_str)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except OSError as e_fsync:
+                    print(f"Warning: os.fsync error on {output_file_path}: {e_fsync}")
             print(f"Wrote result to {args.out}")
         else:
             print(f"ERROR: Agent did not produce a final JSON result. Output to {args.out} skipped.")
