@@ -6,7 +6,7 @@ inputs:
     required: true
 steps:
   - id: step1
-    uses: browser
+    uses: browser_agent
     prompt: "Browse {{dir}}"
     upload_files:
       - name: doc

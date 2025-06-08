@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -16,8 +17,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
-const venvDirName = "dropstep_agent_venv"
-const requirementsHashFile = ".requirements_hash"
+const (
+	venvDirName          = "dropstep_agent_venv"
+	requirementsHashFile = ".requirements_hash"
+)
 
 // ensurePythonVenv sets up the Python virtual environment for the agent.
 // It extracts requirements.txt, creates a venv if it doesn't exist or if requirements changed,
@@ -97,14 +100,14 @@ func ensurePythonVenv(baseCacheDir string, logger *zerolog.Logger) (string, stri
 			logger.Warn().Err(err).Str("path", storedReqHashPath).Msg("Failed to write requirements hash")
 		}
 	} else {
-		logger.Info().Msg("Using existing Python venv")
+		logger.Info().Msg("Existing Python venv found")
 	}
 
 	return venvPath, pythonInterpreter, nil
 }
 
 type SubprocessAgentRunner struct {
-	agentWorkDir string
+	agentWorkDir   string
 	venvPythonPath string
 }
 
@@ -127,7 +130,7 @@ func NewSubprocessAgentRunner(logger *zerolog.Logger) (*SubprocessAgentRunner, e
 	_ = venvBasePath
 
 	return &SubprocessAgentRunner{
-		agentWorkDir: appCacheDir,
+		agentWorkDir:   appCacheDir,
 		venvPythonPath: venvPython,
 	}, nil
 }
@@ -153,7 +156,7 @@ func (s *SubprocessAgentRunner) RunAgent(
 
 	// Extract embedded scripts to the temporary run directory
 	scriptsToExtract := []string{
-		agentassets.RunScriptFile, 
+		agentassets.RunScriptFile,
 		agentassets.MainPyFile,
 		agentassets.CliPyFile,
 		agentassets.ModelsPyFile,
@@ -185,7 +188,9 @@ func (s *SubprocessAgentRunner) RunAgent(
 		cmdArgs = append(cmdArgs, "--upload-file-paths")
 		for _, f := range filesToUpload {
 			absPath, err := filepath.Abs(f.Path)
-			if err != nil { return nil, fmt.Errorf("failed to get abs path for upload %s: %w", f.Path, err) }
+			if err != nil {
+				return nil, fmt.Errorf("failed to get abs path for upload %s: %w", f.Path, err)
+			}
 			cmdArgs = append(cmdArgs, absPath)
 		}
 	}
@@ -239,6 +244,10 @@ func streamOutputStructured(r io.Reader, wg *sync.WaitGroup, source string, logg
 			Msg("Agent output")
 	}
 	if err := scanner.Err(); err != nil && err != io.EOF {
-		logger.Error().Err(err).Str("source", source).Msg("Error streaming agent output")
+		if errors.Is(err, io.EOF) || errors.Is(err, os.ErrClosed) {
+			return
+		}
+		logger.Error().Err(err).Str("source", source).Msg("Unexpected error streaming agent output")
 	}
 }
+

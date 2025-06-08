@@ -6,7 +6,7 @@ import (
 	"github.com/arnavsurve/dropstep/internal"
 )
 
-type HandlerFactory func(ctx internal.ExecutionContext) Handler
+type HandlerFactory func(ctx internal.ExecutionContext) (Handler, error)
 
 // registry stores each type of handler's factory function. GetHandler calls the appropriate Handler
 // factory function to yield a new instance of that Handler
@@ -28,5 +28,5 @@ func GetHandler(ctx internal.ExecutionContext) (Handler, error) {
 		return nil, fmt.Errorf("no handler registered for type: %s", stepType)
 	}
 
-	return factory(ctx), nil
+	return factory(ctx)
 }

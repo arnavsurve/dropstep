@@ -18,14 +18,8 @@ func LoadWorkflowFromFile(path string) (*Workflow, error) {
 		return nil, fmt.Errorf("error parsing workflow YAML: %w", err)
 	}
 
-	// Validate steps
-	for i, step := range wf.Steps {
-		if step.ID == "" {
-			return nil, fmt.Errorf("step at index %d is missing an 'id'", i)
-		}
-		if err := step.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid step at index %d: %w", i, err)
-		}
+	if err := wf.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid workflow: %w", err)
 	}
 
 	return &wf, nil

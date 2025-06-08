@@ -105,7 +105,7 @@ func TestInjectVarsIntoWorkflow(t *testing.T) {
 		Steps: []Step{
 			{
 				ID:    "step1",
-				Uses:  "browser",
+				Uses:  "browser_agent",
 				Prompt: "Open {{file}}",
 				Run:    "cat {{dir}}/{{file}}",
 				TargetDownloadDir: "{{dir}}/downloads",
@@ -135,11 +135,11 @@ func TestStepValidate(t *testing.T) {
 	}{
 		{
 			name: "valid browser step",
-			step: Step{ID: "b1", Uses: "browser", Prompt: "Do something"},
+			step: Step{ID: "b1", Uses: "browser_agent", Prompt: "Do something"},
 		},
 		{
 			name: "browser step with forbidden run",
-			step: Step{ID: "b2", Uses: "browser", Prompt: "Do something", Run: "echo"},
+			step: Step{ID: "b2", Uses: "browser_agent", Prompt: "Do something", Run: "echo"},
 			expectErr: true,
 		},
 		{

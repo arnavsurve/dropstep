@@ -2,14 +2,14 @@ package logging
 
 import (
 	"encoding/json"
-	"io"
 	"os"
 
 	"github.com/rs/zerolog"
 )
 
 type FileSink struct {
-	writer io.Writer
+	// writer io.Writer
+	file *os.File
 }
 
 func NewFileSink(path string) (*FileSink, error) {
@@ -17,10 +17,14 @@ func NewFileSink(path string) (*FileSink, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &FileSink{writer: f}, nil
+	return &FileSink{file: f}, nil
 }
 
 func (f *FileSink) Write(level zerolog.Level, event map[string]any) {
 	data, _ := json.Marshal(event)
-	f.writer.Write(append(data, '\n'))
+	f.file.Write(append(data, '\n'))
+}
+
+func (f *FileSink) Close() error {
+	return f.file.Close()
 }

@@ -1,20 +1,22 @@
-package internal
+package internal_test
 
 import (
 	"testing"
 
+	"github.com/arnavsurve/dropstep/internal"
+	"github.com/arnavsurve/dropstep/internal/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLoadWorkflowFixture(t *testing.T) {
 	file := "testdata/simple_workflow.yml"
-	ctx := VarContext{"dir": "/tmp"}
+	ctx := internal.VarContext{"dir": "/tmp"}
 
-	wf, err := LoadWorkflowFromFile(file)
+	wf, err := internal.LoadWorkflowFromFile(file)
 	require.NoError(t, err)
 
-	injected, err := InjectVarsIntoWorkflow(wf, ctx)
+	injected, err := internal.InjectVarsIntoWorkflow(wf, ctx)
 	require.NoError(t, err)
 
 	require.Len(t, injected.Steps, 1)
@@ -27,7 +29,10 @@ func TestLoadWorkflowFixture(t *testing.T) {
 func TestLoadBrokenWorkflowFixture(t *testing.T) {
 	file := "testdata/broken_workflow.yml"
 
-	_, err := LoadWorkflowFromFile(file)
+	wf, err := internal.LoadWorkflowFromFile(file)
+	require.NoError(t, err)
+
+	err = validation.ValidateWorkflowHandlers(wf)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "browser step requires 'prompt'")
+	assert.Contains(t, err.Error(), "must define 'prompt'")
 }

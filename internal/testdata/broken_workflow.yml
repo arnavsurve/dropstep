@@ -3,8 +3,8 @@ description: missing required fields
 
 steps:
   - id: missing_prompt
-    uses: browser
-    # Missing `prompt`, which is required for browser
+    uses: browser_agent
+    # Missing `prompt`, which is required for browser_agent
 
   - id: shell_with_prompt
     uses: shell

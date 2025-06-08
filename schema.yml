@@ -1,24 +1,25 @@
-name: string                # Human-readable workflow name
-description: string         # Optional summary of the workflow
-inputs:                     # Required user inputs
+name: string # Human-readable workflow name
+description: string # Optional summary of the workflow
+inputs: # Required user inputs
   - name: string
-    type: string            # string | file | number | boolean
+    type: string # string | file | number | boolean
     required: boolean
 
-steps:                      # Ordered list of steps
-  - id: string              # Unique step ID
-    uses: string            # 'browser_agent' | 'shell' | 'api' | plugin ref
-    prompt: string          # (if uses: browser) prompt template
-    upload_files:           # (if uses: browser) files to upload
+steps: # Ordered list of steps
+  - id: string # Unique step ID
+    uses: string # 'browser_agent' | 'shell' | 'api' | plugin ref
+    prompt: string # (if uses: browser_agent) prompt template
+    upload_files: # (if uses: browser_agent) files to upload
       - name: string
         path: string
-    output_schema: string   # (if uses: browser) JSON schema for LLM structured output
-    run: string             # (if uses: shell) command line
-    call:                   # (if uses: api)
-      method: string        # GET, POST, etc.
+    download_dir: string # (if uses: browser_agent) path to target download directory
+    output_schema: string # (if uses: browser_agent) JSON schema for LLM structured output
+    run: string # (if uses: shell) command line
+    call: # (if uses: api)
+      method: string # GET, POST, etc.
       url: string
       headers: map
       body: map
-    if: string              # Optional condition (future: templated eval)
-    retry: int              # Optional retries
-    timeout: duration       # Optional per-step timeout (e.g. 30s)
+    if: string # Optional condition (future: templated eval)
+    retry: int # Optional retries
+    timeout: duration # Optional per-step timeout (e.g. 30s)

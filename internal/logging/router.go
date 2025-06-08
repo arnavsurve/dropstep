@@ -1,9 +1,14 @@
 package logging
 
-import "github.com/rs/zerolog"
+import (
+	"io"
+
+	"github.com/rs/zerolog"
+)
 
 type LogSink interface {
 	Write(level zerolog.Level, event map[string]any)
+	io.Closer
 }
 
 type LoggerRouter struct {
@@ -14,4 +19,15 @@ func (r *LoggerRouter) Log(level zerolog.Level, event map[string]any) {
 	for _, sink := range r.Sinks {
 		sink.Write(level, event)
 	}
+}
+
+// Close enables graceful shutdown of loggers by iterating through all sinks and calling their Close() method.
+func (r *LoggerRouter) Close() error {
+	var firstErr error
+	for _, sink := range r.Sinks {
+		if err := sink.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
 }

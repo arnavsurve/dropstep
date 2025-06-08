@@ -13,6 +13,52 @@ type Workflow struct {
 	Steps       []Step  `yaml:"steps"`
 }
 
+// Validate checks fields at the workflow level, validating workflow name, input types/uniqueness, and step uniqueness
+func (wf *Workflow) Validate() error {
+	if wf.Name == "" {
+		return fmt.Errorf("workflow is missing 'name'")
+	}
+
+	validInputTypes := map[string]bool{
+		"string": true,
+		"file": true,
+		"number": true,
+		"boolean": true,
+	}
+
+	inputNames := make(map[string]bool)
+	for i, input := range wf.Inputs {
+		if input.Name == "" {
+			return fmt.Errorf("input %d is missing 'name'", i)
+		}
+		if inputNames[input.Name] {
+			return fmt.Errorf("duplicate input name: %q", input.Name)
+		}
+		inputNames[input.Type] = true
+
+		if !validInputTypes[input.Type] {
+			return fmt.Errorf("input %q has invalid type %q", input.Name, input.Type)
+		}
+	}
+
+	stepIDs := make(map[string]bool)
+	for i, step := range wf.Steps {
+		if step.ID == "" {
+			return fmt.Errorf("step %d is missing 'id'", i)
+		}
+		if stepIDs[step.ID] {
+			return fmt.Errorf("duplicate step id: %q", step.ID)
+		}
+		stepIDs[step.ID] = true
+
+		if step.Uses == "" {
+			return fmt.Errorf("step %q is missing 'uses'", step.ID)
+		}
+	}
+
+	return nil
+}
+
 type Input struct {
 	Name     string `yaml:"name"`
 	Type     string `yaml:"type"`

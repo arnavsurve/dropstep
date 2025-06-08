@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/rs/zerolog"
@@ -13,14 +12,15 @@ import (
 type ConsoleSink struct{}
 
 func (c *ConsoleSink) Write(level zerolog.Level, event map[string]any) {
-	stepId := fmt.Sprintf("%v", event["step_id"])
-	msg := fmt.Sprintf("%v", event["message"])
-	source := fmt.Sprintf("%v", event["source"])
-	agentLine := fmt.Sprintf("%v", event["agent_line"])
+	// Extract fields safely
+	stepId := getString(event, "step_id")
+	msg := getString(event, "message")
+	source := getString(event, "source")
+	agentLine := getString(event, "agent_line")
+	errorMsg := getString(event, "error")
+	timestamp := getString(event, "time")
 
-	timestamp := time.Now().Format("15:04:05")
-
-	// Define colors for different log levels
+	// Define colors per log level
 	levelColor := map[zerolog.Level]*color.Color{
 		zerolog.DebugLevel: color.New(color.FgCyan),
 		zerolog.InfoLevel:  color.New(color.FgGreen),
@@ -29,42 +29,57 @@ func (c *ConsoleSink) Write(level zerolog.Level, event map[string]any) {
 		zerolog.FatalLevel: color.New(color.FgRed, color.Bold),
 	}
 
-	// Get color for current level
 	levelFmt := levelColor[level].SprintFunc()
 	timestampFmt := color.New(color.FgWhite).SprintFunc()
+	stepLabel := stepId
+	if stepLabel == "" {
+		stepLabel = "workflow"
+	}
 
 	switch {
-	case agentLine != "<nil>" && source != "<nil>":
-		// Agent subprocess output
+	case agentLine != "" && source != "":
 		fmt.Printf("[%s %s] %s [agent/%s]: %s\n",
 			levelFmt(strings.ToUpper(level.String())),
 			timestampFmt(timestamp),
-			color.CyanString(stepId),
+			color.CyanString(stepLabel),
 			color.BlueString(source),
 			agentLine)
 
-	case stepId == "<nil>":
-		// Base logging at workflow level, no step ID
-		fmt.Printf("[%s %s] %s\n",
-			levelFmt(strings.ToUpper(level.String())),
-			timestampFmt(timestamp),
-			msg)
-
-	case msg != "<nil>":
-		// General message within a step
+	case errorMsg != "":
 		fmt.Printf("[%s %s] %s: %s\n",
 			levelFmt(strings.ToUpper(level.String())),
 			timestampFmt(timestamp),
-			color.CyanString(stepId),
+			color.RedString(stepLabel),
+			errorMsg)
+
+	case msg != "":
+		fmt.Printf("[%s %s] %s: %s\n",
+			levelFmt(strings.ToUpper(level.String())),
+			timestampFmt(timestamp),
+			color.CyanString(stepLabel),
 			msg)
 
 	default:
-		// Fallback for unexpected structured event
+		// Fallback: print entire event
 		jsonStr, _ := json.MarshalIndent(event, "", "  ")
 		fmt.Printf("[%s %s] %s: %s\n",
 			levelFmt(strings.ToUpper(level.String())),
 			timestampFmt(timestamp),
-			color.CyanString(stepId),
+			color.CyanString(stepLabel),
 			string(jsonStr))
 	}
+}
+
+// getString safely extracts a string from a map
+func getString(m map[string]any, key string) string {
+	if val, ok := m[key]; ok && val != nil {
+		return fmt.Sprintf("%v", val)
+	}
+	return ""
+}
+
+// Close implements the io.Closer interface. We don't want to close os.Stdout,
+// this is a no-op.
+func (c *ConsoleSink) Close() error {
+	return nil
 }

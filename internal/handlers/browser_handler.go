@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -17,15 +16,16 @@ type BrowserHandler struct {
 }
 
 func init() {
-	RegisterHandlerFactory("browser_agent", func(ctx internal.ExecutionContext) Handler {
+	RegisterHandlerFactory("browser_agent", func(ctx internal.ExecutionContext) (Handler, error) {
 		agentRunner, err := agent.NewSubprocessAgentRunner(ctx.Logger)
 		if err != nil {
-			log.Fatalf("Failed to initialize agent runner: %v", err)
+			return nil, fmt.Errorf("failed to initialize agent runner: %w", err)
 		}
-		return &BrowserHandler{
+		handler := &BrowserHandler{
 			Agent:   agentRunner,
 			StepCtx: ctx,
 		}
+		return handler, nil
 	})
 }
 
@@ -33,16 +33,45 @@ func (bh *BrowserHandler) Validate() error {
 	step := bh.StepCtx.Step
 	logger := bh.StepCtx.Logger
 
-	if step.TargetDownloadDir != "" {
-		logger.Debug().Str("path", step.TargetDownloadDir).Msg("Resolved target path for downloads")
+	if step.Prompt == "" {
+		return fmt.Errorf("browser_agent step %q must define 'prompt'", step.ID)
 	}
+
+	if step.Run != "" {
+		return fmt.Errorf("browser_agent step %q must not define 'run'", step.ID)
+	}
+	if step.Call != nil {
+		return fmt.Errorf("browser_agent step %q must not define 'call'", step.ID)
+	}
+
+	for i, f := range step.UploadFiles {
+		if f.Name == "" {
+			return fmt.Errorf("upload_files[%d] in step %q is missing 'name'", i, step.ID)
+		}
+		if f.Path == "" {
+			return fmt.Errorf("upload_files[%d] in step %q is missing 'path'", i, step.ID)
+		}
+		if _, err := os.Stat(f.Path); err != nil {
+			return fmt.Errorf("upload_files[%d] in step %q: file not found at path %q", i, step.ID, f.Path)
+		}
+	}
+
 	if step.OutputSchemaFile != "" {
-		// Check if the path is non-empty after potential variable resolution (already done by InjectVars)
-		// Further validation (e.g., file existence) could happen here or just before reading in Run().
-		// For now, assume InjectVarsIntoWorkflow handles empty resolved paths if needed.
-		logger.Debug().Str("path", step.OutputSchemaFile).Msg("Resolved output schema")
+		if _, err := os.Stat(step.OutputSchemaFile); err != nil {
+			return fmt.Errorf("step %q: output_schema file not found at path %q", step.ID, step.OutputSchemaFile)
+		}
 	}
-	logger.Info().Msgf("(Placeholder) - validating %s", step.ID)
+
+	if step.TargetDownloadDir != "" {
+		if _, err := os.Stat(step.TargetDownloadDir); err != nil {
+			if os.IsNotExist(err) {
+				logger.Warn().Str("path", step.TargetDownloadDir).Msg("Download directory does not exist yet, will attempt to create at runtime")
+			} else {
+				return fmt.Errorf("step %q: error checking download_dir path %q: %w", step.ID, step.TargetDownloadDir, err)
+			}
+		}
+	}
+
 	return nil
 }
 
