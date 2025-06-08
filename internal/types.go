@@ -1,9 +1,13 @@
 package internal
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/rs/zerolog"
+)
 
 type Workflow struct {
-	Name        string  `yaml:"name"`
+	Name string  `yaml:"name"`
 	Description string  `yaml:"description"`
 	Inputs      []Input `yaml:"inputs"`
 	Steps       []Step  `yaml:"steps"`
@@ -17,7 +21,7 @@ type Input struct {
 
 type Step struct {
 	ID               string         `yaml:"id"`
-	Uses             string         `yaml:"uses"`                   // 'browser' | 'shell' | 'api'
+	Uses             string         `yaml:"uses"`                   // 'browser_agent' | 'shell' | 'api'
 	Prompt           string         `yaml:"prompt,omitempty"`       // if (uses: browser) prompt template
 	Run              string         `yaml:"run,omitempty"`          // (if uses: shell) command line
 	Call             *ApiCall       `yaml:"call,omitempty"`         // (if uses: api)
@@ -28,7 +32,7 @@ type Step struct {
 
 func (s *Step) Validate() error {
 	switch s.Uses {
-	case "browser":
+	case "browser_agent":
 		if s.Prompt == "" {
 			return fmt.Errorf("step %q: browser step requires 'prompt'", s.ID)
 		}
@@ -72,5 +76,5 @@ type FileToUpload struct {
 
 type ExecutionContext struct {
 	Step Step
-	// Include logger, DB conn here
+	Logger *zerolog.Logger
 }

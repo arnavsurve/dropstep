@@ -6,15 +6,14 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/arnavsurve/dropstep/internal"
 	"github.com/arnavsurve/dropstep/internal/agentassets"
+	"github.com/rs/zerolog"
 )
 
 const venvDirName = "dropstep_agent_venv"
@@ -23,7 +22,7 @@ const requirementsHashFile = ".requirements_hash"
 // ensurePythonVenv sets up the Python virtual environment for the agent.
 // It extracts requirements.txt, creates a venv if it doesn't exist or if requirements changed,
 // and installs dependencies. Returns the path to the venv's python executable.
-func ensurePythonVenv(baseCacheDir string) (string, string, error) {
+func ensurePythonVenv(baseCacheDir string, logger *zerolog.Logger) (string, string, error) {
 	venvPath := filepath.Join(baseCacheDir, venvDirName)
 	pythonInterpreter := filepath.Join(venvPath, "bin", "python")
 	pipExecutable := filepath.Join(venvPath, "bin", "pip")
@@ -41,15 +40,15 @@ func ensurePythonVenv(baseCacheDir string) (string, string, error) {
 
 	recreateVenv := false
 	if os.IsNotExist(venvStatErr) {
-		log.Println("Python venv not found, creating...")
+		logger.Debug().Msg("Python venv not found, creating...")
 		recreateVenv = true
 	} else {
 		storedReqHashBytes, err := os.ReadFile(storedReqHashPath)
 		if err != nil || string(storedReqHashBytes) != currentReqHash {
-			log.Println("Requirements.txt changed or hash file missing, recreating venv...")
+			logger.Debug().Msg("Requirements.txt changed or hash file missing, recreating venv...")
 			recreateVenv = true
 			if err := os.RemoveAll(venvPath); err != nil { // Clean up old venv before recreating
-				log.Printf("Warning: failed to remove old venv at %s: %v", venvPath, err)
+				logger.Warn().Err(err).Str("path", venvPath).Msg("Failed to remove old venv")
 			}
 		}
 	}
@@ -64,11 +63,11 @@ func ensurePythonVenv(baseCacheDir string) (string, string, error) {
 		cmdVenv := exec.Command("python3", "-m", "venv", venvPath)
 		var stderrVenv bytes.Buffer
 		cmdVenv.Stderr = &stderrVenv
-		log.Printf("Executing: %s", cmdVenv.String())
+		logger.Debug().Str("command", cmdVenv.String()).Msg("Executing subprocess call")
 		if err := cmdVenv.Run(); err != nil {
 			return "", "", fmt.Errorf("failed to create python venv (python3 -m venv %s): %w. Stderr: %s", venvPath, err, stderrVenv.String())
 		}
-		log.Println("Python venv created successfully.")
+		logger.Info().Msg("Python venv created successfully")
 
 		// Install requirements
 		// Need to write requirements.txt to a temporary location for pip to read
@@ -87,18 +86,18 @@ func ensurePythonVenv(baseCacheDir string) (string, string, error) {
 		cmdPip := exec.Command(pipExecutable, "install", "-r", tempReqFile.Name())
 		var stderrPip bytes.Buffer
 		cmdPip.Stderr = &stderrPip
-		log.Printf("Executing: %s", cmdPip.String())
+		logger.Debug().Str("command", cmdPip.String()).Msg("Executing subprocess call")
 		if err := cmdPip.Run(); err != nil {
 			return "", "", fmt.Errorf("failed to install requirements (pip install -r %s): %w. Stderr: %s", tempReqFile.Name(), err, stderrPip.String())
 		}
-		log.Println("Python requirements installed successfully.")
+		logger.Info().Msg("Python requirements installed successfully")
 
 		// Store the hash of the current requirements.txt
 		if err := os.WriteFile(storedReqHashPath, []byte(currentReqHash), 0644); err != nil {
-			log.Printf("Warning: failed to write requirements hash to %s: %v", storedReqHashPath, err)
+			logger.Warn().Err(err).Str("path", storedReqHashPath).Msg("Failed to write requirements hash")
 		}
 	} else {
-		log.Println("Using existing Python venv.")
+		logger.Info().Msg("Using existing Python venv")
 	}
 
 	return venvPath, pythonInterpreter, nil
@@ -110,10 +109,10 @@ type SubprocessAgentRunner struct {
 }
 
 // NewSubprocessAgentRunner initializes the runner, ensuring Python environment is set up.
-func NewSubprocessAgentRunner() (*SubprocessAgentRunner, error) {
+func NewSubprocessAgentRunner(logger *zerolog.Logger) (*SubprocessAgentRunner, error) {
 	userCacheDir, err := os.UserCacheDir()
 	if err != nil {
-		log.Printf("Warning: could not get user cache dir, using temp dir for agent: %v", err)
+		logger.Warn().Err(err).Msg("Could not get user cache dir, using temp dir for agent")
 		userCacheDir = os.TempDir()
 	}
 	appCacheDir := filepath.Join(userCacheDir, "dropstep")
@@ -121,7 +120,7 @@ func NewSubprocessAgentRunner() (*SubprocessAgentRunner, error) {
 		return nil, fmt.Errorf("failed to create app cache directory %s: %w", appCacheDir, err)
 	}
 
-	venvBasePath, venvPython, err := ensurePythonVenv(appCacheDir)
+	venvBasePath, venvPython, err := ensurePythonVenv(appCacheDir, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to ensure python venv: %w", err)
 	}
@@ -139,6 +138,7 @@ func (s *SubprocessAgentRunner) RunAgent(
 	filesToUpload []internal.FileToUpload,
 	schemaContent string,
 	targetDownloadDir string,
+	logger *zerolog.Logger,
 ) ([]byte, error) {
 	// Create a temporary directory for this specific agent run to place scripts
 	runTempDir, err := os.MkdirTemp(s.agentWorkDir, "agentrun-*")
@@ -147,7 +147,7 @@ func (s *SubprocessAgentRunner) RunAgent(
 	}
 	defer func() {
 		if err := os.RemoveAll(runTempDir); err != nil {
-			log.Printf("Warning: failed to remove agent run temp directory %s: %v", runTempDir, err)
+			logger.Warn().Str("directory", runTempDir).Err(err).Msg("Failed to remove agent run temp directory")
 		}
 	}()
 
@@ -176,9 +176,9 @@ func (s *SubprocessAgentRunner) RunAgent(
 
 	outputPath, err := filepath.Abs(rawOutputPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get absolte path for output file %s: %v", rawOutputPath, err)
+		return nil, fmt.Errorf("failed to get absolute path for output file %s: %v", rawOutputPath, err)
 	}
-	log.Printf("Agent output will be written to absolute path: %s", outputPath)
+	logger.Debug().Str("path", outputPath).Msg("Resolved path for agent output")
 
 	cmdArgs := []string{"--prompt", prompt, "--out", outputPath}
 	if len(filesToUpload) > 0 {
@@ -213,8 +213,8 @@ func (s *SubprocessAgentRunner) RunAgent(
 	}
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go streamOutput(stdout, os.Stdout, &wg, "AGENT_STDOUT")
-	go streamOutput(stderr, os.Stderr, &wg, "AGENT_STDERR")
+	go streamOutputStructured(stdout, &wg, "STDOUT", logger)
+	go streamOutputStructured(stderr, &wg, "STDERR", logger)
 
 	waitErr := cmd.Wait()
 	wg.Wait()
@@ -229,16 +229,16 @@ func (s *SubprocessAgentRunner) RunAgent(
 	return jsonData, nil
 }
 
-func streamOutput(r io.Reader, w io.Writer, wg *sync.WaitGroup, prefix string) {
+func streamOutputStructured(r io.Reader, wg *sync.WaitGroup, source string, logger *zerolog.Logger) {
 	defer wg.Done()
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
-		fmt.Fprintf(w, "[%s] %s\n", prefix, scanner.Text())
+		logger.Info().
+			Str("source", source).
+			Str("agent_line", scanner.Text()).
+			Msg("Agent output")
 	}
-	err := scanner.Err()
-	if err != nil && err != io.EOF {
-		if !strings.Contains(err.Error(), "file already closed") {
-			fmt.Fprintf(os.Stderr, "Error reading stream for %s: %v\n", prefix, err)
-		}
+	if err := scanner.Err(); err != nil && err != io.EOF {
+		logger.Error().Err(err).Str("source", source).Msg("Error streaming agent output")
 	}
 }

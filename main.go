@@ -2,11 +2,13 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
+
 	"github.com/arnavsurve/dropstep/internal"
 	"github.com/arnavsurve/dropstep/internal/handlers"
+	"github.com/arnavsurve/dropstep/internal/logging"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
-	"log"
 )
 
 func main() {
@@ -23,6 +25,9 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Generate workflow run UUID
+	wfRunID := uuid.New().String()
+
 	// Load varfile YAML
 	varCtx, err := internal.ResolveVarfile(*varfilePtr)
 	if err != nil {
@@ -35,12 +40,30 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, step := range wf.Steps {
-		fmt.Printf("==> Running step %q (uses=%s)\n", step.ID, step.Uses)
+	// Initialize file logger
+	fileSink, err := logging.NewFileSink("out.json") 
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	// Initialize logger router with sinks and global logger
+	router := &logging.LoggerRouter{
+		Sinks: []logging.LogSink{
+			&logging.ConsoleSink{},
+			fileSink,
+		},
+	}
+	logging.ConfigureGlobalLogger(router, wf.Name, wfRunID)
+
+	logging.BaseLogger.Info().Msg("Initialized workflow logger")
+
+	for _, step := range wf.Steps {
+		logging.BaseLogger.Info().Msgf("Running step %q (uses=%s)", step.ID, step.Uses)
+
+		scopedLogger := logging.ScopedLogger(step.ID, step.Uses)
 		ctx := internal.ExecutionContext{
 			Step: step,
-			// logger, db conn goes here
+			Logger: &scopedLogger,
 		}
 
 		handler, err := handlers.GetHandler(ctx)

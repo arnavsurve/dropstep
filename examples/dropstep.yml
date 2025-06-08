@@ -11,7 +11,7 @@ inputs:
 
 steps:
   - id: test_file_download
-    uses: browser
+    uses: browser_agent
     prompt: Go to {{url}} and download sample1.txt.
     upload_files:
       - name: resume
