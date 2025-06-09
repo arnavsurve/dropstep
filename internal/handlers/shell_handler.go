@@ -73,16 +73,16 @@ func (sh *ShellHandler) Run() error {
 		}
 	}
 
-	shellToUse := "sh"
-	if step.Run.Shell != "" {
-		shellToUse = step.Run.Shell
+	interpreter := "/bin/bash"
+	if step.Run.Interpreter != "" {
+		interpreter = step.Run.Interpreter
 	}
 
 	var cmd *exec.Cmd
 	if isInline {
-		cmd = sh.getInlineCommand(shellToUse)
+		cmd = sh.getInlineCommand(interpreter)
 	} else {
-		cmd = sh.getFileCommand(shellToUse)
+		cmd = sh.getFileCommand(interpreter)
 	}
 
 	stdout, err := cmd.StdoutPipe()
@@ -94,7 +94,7 @@ func (sh *ShellHandler) Run() error {
 		return fmt.Errorf("error creating stderr pipe: %w", err)
 	}
 
-	logger.Info().Str("shell", shellToUse).Msg("Starting shell script execution")
+	logger.Info().Str("shell", interpreter).Msg("Starting shell script execution")
 	
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("error executing script: %w", err)
@@ -118,20 +118,20 @@ func (sh *ShellHandler) Run() error {
 	return nil
 }
 
-func (sh *ShellHandler) getInlineCommand(shellToUse string) *exec.Cmd {
+func (sh *ShellHandler) getInlineCommand(interpreter string) *exec.Cmd {
 	logger := sh.StepCtx.Logger
 	inlineScript := sh.StepCtx.Step.Run.Inline
 	if len(inlineScript) > 1000 {
 		logger.Warn().Msg("Long script in 'inline' - consider passing a script file as 'path' for maintainability.")
 	}
 	safeScript := "set -euo pipefail\n" + inlineScript
-	shellCmd := exec.Command(shellToUse, "-c", safeScript)
+	shellCmd := exec.Command(interpreter, "-c", safeScript)
 	return shellCmd
 }
 
-func (sh *ShellHandler) getFileCommand(shellToUse string) *exec.Cmd {
+func (sh *ShellHandler) getFileCommand(interpreter string) *exec.Cmd {
 	scriptPath := sh.StepCtx.Step.Run.Path
-	shellCmd := exec.Command(shellToUse, scriptPath)
+	shellCmd := exec.Command(interpreter, scriptPath)
 	return shellCmd
 }
 

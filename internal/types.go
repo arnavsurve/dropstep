@@ -123,7 +123,7 @@ type FileToUpload struct {
 type ShellRun struct {
 	Path string `yaml:"path"`
 	Inline string `yaml:"inline"`
-	Shell string `yaml:"shell"`
+	Interpreter string `yaml:"interpreter"`
 }
 
 type ExecutionContext struct {

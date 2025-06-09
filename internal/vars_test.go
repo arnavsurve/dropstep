@@ -107,7 +107,9 @@ func TestInjectVarsIntoWorkflow(t *testing.T) {
 				ID:    "step1",
 				Uses:  "browser_agent",
 				Prompt: "Open {{file}}",
-				Run:    "cat {{dir}}/{{file}}",
+				Run: &ShellRun{
+					Inline: "cat {{dir}}/{{file}}",
+				},
 				TargetDownloadDir: "{{dir}}/downloads",
 				UploadFiles: []FileToUpload{
 					{Name: "fileVar", Path: "{{dir}}/to_upload.txt"},
@@ -121,7 +123,7 @@ func TestInjectVarsIntoWorkflow(t *testing.T) {
 
 	step := updated.Steps[0]
 	assert.Equal(t, "Open test.txt", step.Prompt)
-	assert.Equal(t, "cat /tmp/test.txt", step.Run)
+	assert.Equal(t, "cat /tmp/test.txt", step.Run.Inline)
 	assert.Equal(t, "/tmp/downloads", step.TargetDownloadDir)
 	assert.Equal(t, "/tmp/to_upload.txt", step.UploadFiles[0].Path)
 	assert.Equal(t, "fileVar", step.UploadFiles[0].Name)
@@ -139,12 +141,14 @@ func TestStepValidate(t *testing.T) {
 		},
 		{
 			name: "browser step with forbidden run",
-			step: Step{ID: "b2", Uses: "browser_agent", Prompt: "Do something", Run: "echo"},
+			step: Step{ID: "b2", Uses: "browser_agent", Prompt: "Do something", Run: &ShellRun{
+				Inline: "echo",
+			}},
 			expectErr: true,
 		},
 		{
 			name: "valid shell step",
-			step: Step{ID: "s1", Uses: "shell", Run: "ls -la"},
+			step: Step{ID: "s1", Uses: "shell", Run: &ShellRun{Inline: "ls -la"}},
 		},
 		{
 			name: "shell step missing run",

@@ -8,7 +8,8 @@ steps:
 
   - id: shell_with_prompt
     uses: shell
-    run: echo "Hello"
+    run: 
+      inline: echo "Hello"
     prompt: "should not be here"
 
   - id: api_missing_call

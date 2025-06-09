@@ -245,8 +245,8 @@ func InjectVarsIntoWorkflow(wf *Workflow, globalVarCtx VarContext) (*Workflow, e
 				}
 			}
 
-			if s.Run.Shell != "" {
-				s.Run.Shell, err = resolver.Resolve(s.Run.Shell, "global", "shell to use for shell script")
+			if s.Run.Interpreter != "" {
+				s.Run.Interpreter, err = resolver.Resolve(s.Run.Interpreter, "global", "shell to use for shell script")
 				if err != nil {
 					return nil, fmt.Errorf("step %q (%q): %w", s.ID, s.Uses, err)
 				}

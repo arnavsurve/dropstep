@@ -25,4 +25,4 @@ steps:
       inline: |
         echo "Hello world!"
         pwd
-      shell: zsh
+      interpreter: zsh
