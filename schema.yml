@@ -8,18 +8,25 @@ inputs: # Required user inputs
 steps: # Ordered list of steps
   - id: string # Unique step ID
     uses: string # 'browser_agent' | 'shell' | 'api' | plugin ref
+
     prompt: string # (if uses: browser_agent) prompt template
     upload_files: # (if uses: browser_agent) files to upload
       - name: string
         path: string
     download_dir: string # (if uses: browser_agent) path to target download directory
     output_schema: string # (if uses: browser_agent) JSON schema for LLM structured output
-    run: string # (if uses: shell) command line
+
+    run: # (if uses: shell) command line
+      path: string
+      inline: string
+      shell: string
+
     call: # (if uses: api)
       method: string # GET, POST, etc.
       url: string
       headers: map
       body: map
+
     if: string # Optional condition (future: templated eval)
     retry: int # Optional retries
     timeout: duration # Optional per-step timeout (e.g. 30s)

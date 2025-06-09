@@ -37,7 +37,7 @@ func (bh *BrowserHandler) Validate() error {
 		return fmt.Errorf("browser_agent step %q must define 'prompt'", step.ID)
 	}
 
-	if step.Run != "" {
+	if step.Run != nil {
 		return fmt.Errorf("browser_agent step %q must not define 'run'", step.ID)
 	}
 	if step.Call != nil {

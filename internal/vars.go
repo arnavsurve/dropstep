@@ -214,11 +214,11 @@ func InjectVarsIntoWorkflow(wf *Workflow, globalVarCtx VarContext) (*Workflow, e
 			}
 		}
 
-		s.UploadFiles = resolver.GetResolvedUploadFiles()
-
-		s.Run, err = resolver.Resolve(s.Run, "global", "shell command")
-		if err != nil {
-			return nil, fmt.Errorf("step %q (%s): %w", s.ID, s.Uses, err)
+		// Only set resolvedUploadFiles if there are any. This is because
+		// many step types rely on s.UploadFiles being nil for validation
+		resolvedUploadFiles := resolver.GetResolvedUploadFiles()
+		if len(resolvedUploadFiles) > 0 {
+			s.UploadFiles = resolver.resolvedUploadFiles
 		}
 
 		// Resolve path for OutputSchemaFile using global context
@@ -228,6 +228,29 @@ func InjectVarsIntoWorkflow(wf *Workflow, globalVarCtx VarContext) (*Workflow, e
 				return nil, fmt.Errorf("step %q (%s): %w", s.ID, s.Uses, pathErr)
 			}
 			s.OutputSchemaFile = resolvedSchemaPath // Update the step's copy with the resolved path
+		}
+
+		if s.Run != nil {
+			if s.Run.Path != "" {
+				s.Run.Path, err = resolver.Resolve(s.Run.Path, "global", "shell script path")
+				if err != nil {
+					return nil, fmt.Errorf("step %q (%s): %w", s.ID, s.Uses, err)
+				}
+			}
+
+			if s.Run.Inline != "" {
+				s.Run.Inline, err = resolver.Resolve(s.Run.Inline, "global", "inline shell script")
+				if err != nil {
+					return nil, fmt.Errorf("step %q (%q): %w", s.ID, s.Uses, err)
+				}
+			}
+
+			if s.Run.Shell != "" {
+				s.Run.Shell, err = resolver.Resolve(s.Run.Shell, "global", "shell to use for shell script")
+				if err != nil {
+					return nil, fmt.Errorf("step %q (%q): %w", s.ID, s.Uses, err)
+				}
+			}
 		}
 
 		if s.Call != nil {

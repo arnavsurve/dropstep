@@ -210,8 +210,14 @@ func (s *SubprocessAgentRunner) RunAgent(
 		"DROPSTEP_AGENT_PY_PATH="+filepath.Join(runTempDir, agentassets.MainPyFile),
 	)
 
-	stdout, _ := cmd.StdoutPipe()
-	stderr, _ := cmd.StderrPipe()
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("error creating stdout pipe: %w", err)
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("error creating stderr pipe: %w", err)
+	}
 
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start agent script %s: %w", extractedRunScriptPath, err)

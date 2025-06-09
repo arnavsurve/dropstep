@@ -69,7 +69,7 @@ type Step struct {
 	ID               string         `yaml:"id"`
 	Uses             string         `yaml:"uses"`                   // 'browser_agent' | 'shell' | 'api'
 	Prompt           string         `yaml:"prompt,omitempty"`       // if (uses: browser) prompt template
-	Run              string         `yaml:"run,omitempty"`          // (if uses: shell) command line
+	Run              *ShellRun 		`yaml:"run,omitempty"`          // (if uses: shell) command line
 	Call             *ApiCall       `yaml:"call,omitempty"`         // (if uses: api)
 	UploadFiles      []FileToUpload `yaml:"upload_files,omitempty"` // (if uses: browser) files to upload
 	TargetDownloadDir string 		`yaml:"download_dir,omitempty"` // (if uses: browser) target directory to place downloaded files 
@@ -82,14 +82,14 @@ func (s *Step) Validate() error {
 		if s.Prompt == "" {
 			return fmt.Errorf("step %q: browser step requires 'prompt'", s.ID)
 		}
-		if s.Run != "" {
+		if s.Run != nil {
 			return fmt.Errorf("step %q: browser step must not define 'run'", s.ID)
 		}
 		if s.Call != nil {
 			return fmt.Errorf("step %q: browser step must not define 'call'", s.ID)
 		}
 	case "shell":
-		if s.Run == "" {
+		if s.Run == nil {
 			return fmt.Errorf("step %q: shell step requires 'run'", s.ID)
 		}
 		if s.Prompt != "" || s.Call != nil {
@@ -99,7 +99,7 @@ func (s *Step) Validate() error {
 		if s.Call == nil {
 			return fmt.Errorf("step %q: api step requires 'call'", s.ID)
 		}
-		if s.Run != "" || s.Prompt != "" {
+		if s.Run != nil || s.Prompt != "" {
 			return fmt.Errorf("step %q: api step must not define 'run' or 'prompt'", s.ID)
 		}
 	default:
@@ -118,6 +118,12 @@ type ApiCall struct {
 type FileToUpload struct {
 	Name string `yaml:"name"`
 	Path string `yaml:"path"`
+}
+
+type ShellRun struct {
+	Path string `yaml:"path"`
+	Inline string `yaml:"inline"`
+	Shell string `yaml:"shell"`
 }
 
 type ExecutionContext struct {
