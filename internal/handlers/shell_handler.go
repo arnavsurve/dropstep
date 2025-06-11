@@ -2,11 +2,14 @@ package handlers
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 
 	"github.com/arnavsurve/dropstep/internal"
@@ -59,17 +62,14 @@ func (sh *ShellHandler) Validate() error {
 	return nil
 }
 
-func (sh *ShellHandler) Run() error {
+func (sh *ShellHandler) Run() (*internal.StepResult, error) {
 	step := sh.StepCtx.Step
 	logger := sh.StepCtx.Logger
 
-	var isInline bool
-	if step.Run.Inline != "" {
-		isInline = true
-	} else {
-		isInline = false
+	isInline := step.Run.Inline != ""
+	if !isInline {
 		if _, err := os.Stat(step.Run.Path); err != nil {
-			return fmt.Errorf("error resolving script path: %w", err)
+			return nil, fmt.Errorf("error resolving script path: %w", err)
 		}
 	}
 
@@ -85,37 +85,40 @@ func (sh *ShellHandler) Run() error {
 		cmd = sh.getFileCommand(interpreter)
 	}
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("error creating stdout pipe: %w", err)
-	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("error creating stderr pipe: %w", err)
-	}
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
 
 	logger.Info().Str("shell", interpreter).Msg("Starting shell script execution")
 	
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("error executing script: %w", err)
+		return nil, fmt.Errorf("error executing script: %w", err)
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go streamOutputStructured(stdout, &wg, "STDOUT", logger)
-	go streamOutputStructured(stderr, &wg, "STDERR", logger)
-
 	waitErr := cmd.Wait()
-	wg.Wait()
+
+	logBuffer(strings.NewReader(stderrBuf.String()), "STDERR", logger)
+	logBuffer(strings.NewReader(stdoutBuf.String()), "STDOUT", logger)
+
 	if waitErr != nil {
 		if exitErr, ok := waitErr.(*exec.ExitError); ok {
 			logger.Error().Int("exit_code", exitErr.ExitCode()).Msg("Script exited with non-zero code")
 		}
-		return fmt.Errorf("shell script failed: %w", waitErr)
+		return nil, fmt.Errorf("shell script failed: %w", waitErr)
 	}
 
 	logger.Info().Msg("Shell script executed successfully")
-	return nil
+
+	stdout := strings.TrimSpace(stdoutBuf.String())
+	var structuredOutput map[string]any
+
+	if err := json.Unmarshal([]byte(stdout), &structuredOutput); err == nil {
+		logger.Debug().Msg("Shell output was valid JSON, promoting to structured output.")
+		return &internal.StepResult{Output: structuredOutput}, nil
+	}
+
+	logger.Debug().Msg("Shell output was not JSON, treating as raw string output.")
+	return &internal.StepResult{Output: stdout}, nil
 }
 
 func (sh *ShellHandler) getInlineCommand(interpreter string) *exec.Cmd {
@@ -135,6 +138,17 @@ func (sh *ShellHandler) getFileCommand(interpreter string) *exec.Cmd {
 	return shellCmd
 }
 
+func logBuffer(r io.Reader, source string, logger *zerolog.Logger) {
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		logger.Info().
+			Str("source", source).
+			Str("shell_line", scanner.Text()).
+			Msg("Shell output")
+	}
+}
+
+// Deprecated, keeping here in case streaming is reintroduced
 func streamOutputStructured(r io.Reader, wg *sync.WaitGroup, source string, logger *zerolog.Logger) {
 	defer wg.Done()
 	scanner := bufio.NewScanner(r)

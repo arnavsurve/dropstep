@@ -34,13 +34,8 @@ func (r *RunCmd) Run() error {
 	// Load varfile YAML
 	varCtx, err := internal.ResolveVarfile(r.Varfile)
 	if err != nil {
-		return fmt.Errorf("could not resolve varfile: %w", err)
-	}
-
-	// Resolve and merge input vars into workflow file
-	wf, err = internal.InjectVarsIntoWorkflow(wf, varCtx)
-	if err != nil {
-		return fmt.Errorf("could not resolve variables for workflow: %w", err)
+		log.Warn().Err(err).Msg("Could not resolve varfile, proceeding without global variables")
+		varCtx = make(internal.VarContext)
 	}
 
 	// Validate each handler YAML definition
@@ -76,25 +71,39 @@ func (r *RunCmd) Run() error {
 	log.Info().Msg("Initialized workflow logger")
 	log.Info().Msgf("Starting workflow: %q (run ID: %s)", wf.Name, wfRunID)
 
+	stepResults := make(internal.StepResultsContext)
+
 	// Run handlers
 	for _, step := range wf.Steps {
 		logging.BaseLogger.Info().Msgf("Running step %q (uses=%s)", step.ID, step.Uses)
 
-		scopedLogger := logging.ScopedLogger(step.ID, step.Uses)
+		resolvedStep, err := internal.ResolveStepVariables(&step, varCtx, stepResults)
+		if err != nil {
+			return fmt.Errorf("could not resolve variales for step %q: %w", step.ID, err)
+		}
+
+		scopedLogger := logging.ScopedLogger(resolvedStep.ID, resolvedStep.Uses)
 		ctx := internal.ExecutionContext{
-			Step: step,
+			Step: *resolvedStep,
 			Logger: &scopedLogger,
 		}
 
 		handler, err := handlers.GetHandler(ctx)
 		if err != nil {
-			return fmt.Errorf("error getting handler for step %q: %w", step.ID, err)
+			return fmt.Errorf("error getting handler for step %q: %w", resolvedStep.ID, err)
 		}
 
-		if err = handler.Run(); err != nil {
-			return fmt.Errorf("error running step %q: %w", step.ID, err)
+		result, err := handler.Run()
+		if err != nil {
+			return fmt.Errorf("error running step %q: %w", resolvedStep.ID, err)
+		}
+
+		if result != nil {
+			log.Debug().Interface("result", result).Msgf("Storing result for step %q", resolvedStep.ID)
+			stepResults[resolvedStep.ID] = *result
 		}
 	}
 
+	log.Info().Msg("Workflow completed successfully.")
 	return nil
 }

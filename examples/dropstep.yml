@@ -10,19 +10,19 @@ inputs:
   #   required: true
 
 steps:
-  # - id: test_file_download
-  #   uses: browser_agent
-  #   prompt: Go to {{url}} and download sample1.txt.
-  #   # upload_files:
-  #   #   - name: resume
-  #   #     path: "{{ resume_path }}"
-  #   download_dir: "./downloads/"
-  #   output_schema: "./schemas/download_schema.json"
+  - id: test_file_download
+    uses: browser_agent
+    prompt: Go to {{url}} and download sample1.txt.
+    # upload_files:
+    #   - name: resume
+    #     path: "{{ resume_path }}"
+    download_dir: "./downloads/"
+    output_schema: "./schemas/download_schema.json"
 
-  - id: test_shell_script
-    uses: shell
-    run:
-      inline: |
-        echo "Hello world!"
-        pwd
-      interpreter: zsh
+  # - id: test_shell_script
+  #   uses: shell
+  #   run:
+  #     inline: |
+  #       echo "Hello world!"
+  #       pwd
+  #     interpreter: zsh

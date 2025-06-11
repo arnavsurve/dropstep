@@ -1,0 +1,42 @@
+name: data-passing-test-workflow-final
+description: A workflow to test inter-step data passing with a real download.
+
+steps:
+  - id: generate_json_data
+    uses: shell
+    run:
+      inline: |
+        echo '{"site_url": "https://www.filesampleshub.com/format/document/txt", "filename_to_find": "sample2.txt"}'
+
+  - id: download_the_file
+    uses: browser_agent
+    prompt: "Go to {{ steps.generate_json_data.output.site_url }} and download the file named '{{ steps.generate_json_data.output.filename_to_find }}'."
+    output_schema: "./schemas/download_schema.json"
+
+  - id: verify_download
+    uses: shell
+    run:
+      inline: |
+        echo "--- Verifying Download ---"
+        DOWNLOADED_FILE_PATH="{{ steps.download_the_file.output.fileLocationOnDisk }}/{{ steps.download_the_file.output.downloadedFileName }}"
+        JSON_REPORT_PATH="{{ steps.download_the_file.output_file }}"
+        
+        echo "Agent reported download path: $DOWNLOADED_FILE_PATH"
+        echo "Agent JSON report is at: $JSON_REPORT_PATH"
+
+        echo "Verifying downloaded file existence at [$DOWNLOADED_FILE_PATH]..."
+        if [ -f "$DOWNLOADED_FILE_PATH" ]; then
+          echo "SUCCESS: Downloaded asset found."
+        else
+          echo "FAILURE: Downloaded asset not found."
+          exit 1
+        fi
+        
+        echo "Verifying JSON report existence at [$JSON_REPORT_PATH]..."
+        if [ -f "$JSON_REPORT_PATH" ]; then
+          echo "SUCCESS: JSON report file found."
+        else
+          echo "FAILURE: JSON report not found."
+          exit 1
+        fi
+        echo "--------------------------"

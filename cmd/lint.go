@@ -11,7 +11,7 @@ import (
 )
 
 type LintCmd struct {
-	Varfile string `help:"The YAML varfile for input variables." default:"dsvars.yml"`
+	Varfile  string `help:"The YAML varfile for input variables." default:"dsvars.yml"`
 	Workflow string `help:"The workflow configuration file." default:"dropstep.yml"`
 }
 
@@ -40,13 +40,15 @@ func (l *LintCmd) Run() error {
 	// Load varfile YAML
 	varCtx, err := internal.ResolveVarfile(l.Varfile)
 	if err != nil {
-		return fmt.Errorf("could not resolve varfile: %w", err)
+		// For linting, a missing varfile is not a fatal error
+		log.Warn().Err(err).Msg("Could not resolve varfile, proceeding without global variables")
+		varCtx = make(internal.VarContext)
 	}
 
-	// Resolve and merge input vars into workflow file
+	// Resolve and merge input vars into workflow file (globals only for linting)
 	wf, err = internal.InjectVarsIntoWorkflow(wf, varCtx)
 	if err != nil {
-		return fmt.Errorf("could not resolve variables for workflow: %w", err)
+		return fmt.Errorf("could not resolve global variables for workflow: %w", err)
 	}
 
 	// Validate each handler YAML definition

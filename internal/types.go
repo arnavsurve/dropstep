@@ -6,6 +6,14 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// StepResult is the standardized output structure returned by every handler's Run method.
+type StepResult struct {
+	Output any `json:"output"`
+	OutputFile string `json:"output_file,omitempty"`
+}
+
+type StepResultsContext = map[string]StepResult
+
 type Workflow struct {
 	Name string  `yaml:"name"`
 	Description string  `yaml:"description"`
@@ -13,7 +21,7 @@ type Workflow struct {
 	Steps       []Step  `yaml:"steps"`
 }
 
-// Validate checks fields at the workflow level, validating workflow name, input types/uniqueness, and step uniqueness
+// Validate checks fields at the workflow level, validating workflow name, input types/uniqueness, and step uniqueness.
 func (wf *Workflow) Validate() error {
 	if wf.Name == "" {
 		return fmt.Errorf("workflow is missing 'name'")
