@@ -11,7 +11,7 @@ steps:
   - id: download_the_file
     uses: browser_agent
     prompt: "Go to {{ steps.generate_json_data.output.site_url }} and download the file named '{{ steps.generate_json_data.output.filename_to_find }}'."
-    output_schema: "./schemas/download_schema.json"
+    output_schema: "./examples/schemas/download_schema.json"
     allowed_domains:
       - www.filesampleshub.com
     max_steps: 5

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/arnavsurve/dropstep/internal"
 	"github.com/arnavsurve/dropstep/internal/handlers"
@@ -28,6 +29,13 @@ func (r *RunCmd) Run() error {
 		return fmt.Errorf("could not load workflow file: %w", err)
 	}
 
+	// Get the workflow directory
+	workflowAbsPath, err := filepath.Abs(r.Workflow)
+	if err != nil {
+		return fmt.Errorf("could not determine absolute path for workflow file: %w", err)
+	}
+	workflowDir := filepath.Dir(workflowAbsPath)
+
 	// Generate workflow run UUID
 	wfRunID := uuid.New().String()
 
@@ -39,7 +47,7 @@ func (r *RunCmd) Run() error {
 	}
 
 	// Validate each handler YAML definition
-	if err := validation.ValidateWorkflowHandlers(wf); err != nil {
+	if err := validation.ValidateWorkflowHandlers(wf, workflowDir); err != nil {
 		return fmt.Errorf("error validating workflow steps: %w", err)
 	}
 
@@ -86,6 +94,7 @@ func (r *RunCmd) Run() error {
 		ctx := internal.ExecutionContext{
 			Step: *resolvedStep,
 			Logger: &scopedLogger,
+			WorkflowDir: workflowDir,
 		}
 
 		handler, err := handlers.GetHandler(ctx)

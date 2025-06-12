@@ -32,6 +32,7 @@ func init() {
 func (bh *BrowserHandler) Validate() error {
 	step := bh.StepCtx.Step
 	logger := bh.StepCtx.Logger
+	workflowDir := bh.StepCtx.WorkflowDir
 
 	if step.Prompt == "" {
 		return fmt.Errorf("browser_agent step %q must define 'prompt'", step.ID)
@@ -51,20 +52,37 @@ func (bh *BrowserHandler) Validate() error {
 		if f.Path == "" {
 			return fmt.Errorf("upload_files[%d] in step %q is missing 'path'", i, step.ID)
 		}
+
+		// Validate file exists
+		absPath, err := filepath.Abs(f.Path)
+		if err != nil {
+			return fmt.Errorf("step %q: failed to resolve absolute path for upload_files[%d] %q: %w", step.ID, i, f.Path, err)
+		}
+		if _, err := os.Stat(absPath); err != nil {
+			return fmt.Errorf("step %q: upload_files[%d] file not found at path %q: %w", step.ID, i, absPath, err)
+		}
 	}
 
 	if step.OutputSchemaFile != "" {
-		if _, err := os.Stat(step.OutputSchemaFile); err != nil {
-			return fmt.Errorf("step %q: output_schema file not found at path %q", step.ID, step.OutputSchemaFile)
+		resolvedPath, err := internal.ResolvePathFromWorkflow(workflowDir, step.TargetDownloadDir)
+		if err != nil {
+			return fmt.Errorf("step %q: could not resolve output_schema path: %w", step.ID, err)
+		}
+		if _, err := os.Stat(resolvedPath); err != nil {
+			return fmt.Errorf("step %q: output_schema file not found at path %q", step.ID, resolvedPath)
 		}
 	}
 
 	if step.TargetDownloadDir != "" {
-		if _, err := os.Stat(step.TargetDownloadDir); err != nil {
+		resolvedPath, err := internal.ResolvePathFromWorkflow(workflowDir, step.TargetDownloadDir)
+		if err != nil {
+			return fmt.Errorf("step %q: could not resolve download_dir path: %w", step.ID, err)
+		}
+		if _, err := os.Stat(resolvedPath); err != nil {
 			if os.IsNotExist(err) {
-				logger.Warn().Str("path", step.TargetDownloadDir).Msg("Download directory does not exist yet, will attempt to create at runtime")
+				logger.Warn().Str("path", resolvedPath).Msg("Download directory does not exist yet, will attempt to create at runtime")
 			} else {
-				return fmt.Errorf("step %q: error checking download_dir path %q: %w", step.ID, step.TargetDownloadDir, err)
+				return fmt.Errorf("step %q: error checking download_dir path %q: %w", step.ID, resolvedPath, err)
 			}
 		}
 	}
@@ -95,6 +113,7 @@ func (bh *BrowserHandler) Validate() error {
 func (bh *BrowserHandler) Run() (*internal.StepResult, error) {
 	step := bh.StepCtx.Step
 	logger := bh.StepCtx.Logger
+	workflowDir := bh.StepCtx.WorkflowDir
 
 	outputDir := "output"
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
@@ -107,11 +126,11 @@ func (bh *BrowserHandler) Run() (*internal.StepResult, error) {
 
 	var finalTargetDownloadDir string
 	if step.TargetDownloadDir != "" {
-		absPath, err := filepath.Abs(step.TargetDownloadDir)
+		resolvedPath, err := internal.ResolvePathFromWorkflow(workflowDir, step.TargetDownloadDir)
 		if err != nil {
-			return nil, fmt.Errorf("step %q: failed to get absolute path for target_download_dir %q: %w", step.ID, step.TargetDownloadDir, err)
+			return nil, fmt.Errorf("step %q: failed to resolve target_download_dir %q: %w", step.ID, step.TargetDownloadDir, err)
 		}
-		finalTargetDownloadDir = absPath
+		finalTargetDownloadDir = resolvedPath
 		if err := os.MkdirAll(finalTargetDownloadDir, 0755); err != nil {
 			return nil, fmt.Errorf("step %q: failed to create target download directory %q: %w", step.ID, finalTargetDownloadDir, err)
 		}
@@ -149,8 +168,17 @@ func (bh *BrowserHandler) Run() (*internal.StepResult, error) {
 		outputSchemaJSONString = string(schemaBytes)
 	}
 
+	agentStep := step
+	for i, f := range agentStep.UploadFiles {
+		absUploadPath, err := internal.ResolvePathFromWorkflow(workflowDir, f.Path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve upload file path %q: %w", f.Path, err)
+		}
+		agentStep.UploadFiles[i].Path = absUploadPath
+	}
+
 	agentOutputPath := fmt.Sprintf("output/%s_output.json", step.ID)
-	jsonData, runErr := bh.Agent.RunAgent(step, agentOutputPath, outputSchemaJSONString, finalTargetDownloadDir, logger)
+	jsonData, runErr := bh.Agent.RunAgent(agentStep, agentOutputPath, outputSchemaJSONString, finalTargetDownloadDir, logger)
 
 	if runErr != nil {
 		logger.Error().Err(runErr).Msg("Agent execution failed")

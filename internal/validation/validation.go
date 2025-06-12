@@ -8,7 +8,7 @@ import (
 	"github.com/arnavsurve/dropstep/internal/logging"
 )
 
-func ValidateWorkflowHandlers(wf *internal.Workflow) error {
+func ValidateWorkflowHandlers(wf *internal.Workflow, workflowDir string) error {
 	for _, step := range wf.Steps {
 		logging.BaseLogger.Info().Msgf("Validating step %q (uses=%s)", step.ID, step.Uses)
 
@@ -16,6 +16,7 @@ func ValidateWorkflowHandlers(wf *internal.Workflow) error {
 		ctx := internal.ExecutionContext{
 			Step: step,
 			Logger: &scopedLogger,
+			WorkflowDir: workflowDir,
 		}
 
 		handler, err := handlers.GetHandler(ctx)

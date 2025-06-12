@@ -140,4 +140,5 @@ type ShellRun struct {
 type ExecutionContext struct {
 	Step Step
 	Logger *zerolog.Logger
+	WorkflowDir string
 }

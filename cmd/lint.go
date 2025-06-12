@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/arnavsurve/dropstep/internal"
 	"github.com/arnavsurve/dropstep/internal/logging"
@@ -37,6 +38,13 @@ func (l *LintCmd) Run() error {
 		return fmt.Errorf("could not load workflow file: %w", err)
 	}
 
+	// Get the workflow directory
+	workflowAbsPath, err := filepath.Abs(l.Workflow)
+	if err != nil {
+		return fmt.Errorf("could not determine absolute path for workflow file: %w", err)
+	}
+	workflowDir := filepath.Dir(workflowAbsPath)
+
 	// Load varfile YAML
 	varCtx, err := internal.ResolveVarfile(l.Varfile)
 	if err != nil {
@@ -52,7 +60,7 @@ func (l *LintCmd) Run() error {
 	}
 
 	// Validate each handler YAML definition
-	if err := validation.ValidateWorkflowHandlers(wf); err != nil {
+	if err := validation.ValidateWorkflowHandlers(wf, workflowDir); err != nil {
 		return fmt.Errorf("error validating workflow steps: %w", err)
 	}
 

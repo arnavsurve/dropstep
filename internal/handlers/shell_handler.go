@@ -71,12 +71,18 @@ func (sh *ShellHandler) Validate() error {
 func (sh *ShellHandler) Run() (*internal.StepResult, error) {
 	step := sh.StepCtx.Step
 	logger := sh.StepCtx.Logger
+	workflowDir := sh.StepCtx.WorkflowDir
 
 	isInline := step.Run.Inline != ""
 	if !isInline {
-		if _, err := os.Stat(step.Run.Path); err != nil {
+		resolvedPath, err := internal.ResolvePathFromWorkflow(workflowDir, step.Run.Path)
+		if err != nil {
 			return nil, fmt.Errorf("error resolving script path: %w", err)
 		}
+		if _, err := os.Stat(resolvedPath); err != nil {
+			return nil, fmt.Errorf("script file not found at %q: %w", resolvedPath, err)
+		}
+		step.Run.Path = resolvedPath
 	}
 
 	interpreter := "/bin/bash"
