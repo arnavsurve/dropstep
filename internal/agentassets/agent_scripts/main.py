@@ -57,10 +57,16 @@ async def run_agent_logic():
         api_key=api_key,
     )
 
-    browser_session = BrowserSession(
-        headless=False,
-        browser_profile=browser_profile_obj
-    ) 
+    browser_session_args = {
+        "headless": False,
+        "browser_profile": browser_profile_obj,
+    }
+
+    if args.allowed_domains:
+        browser_session_args["allowed_domains"] = args.allowed_domains
+        print(f"Restricting navigation to domains: {args.allowed_domains}")
+
+    browser_session = BrowserSession(**browser_session_args) 
 
     agent = Agent(
         task=args.prompt,

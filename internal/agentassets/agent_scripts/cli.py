@@ -30,5 +30,10 @@ def parse_agent_args():
         required=True,
         help="Absolute path to the directory where browser downloads should be saved.",
     )
-    # Add other CLI arguments if you introduce more
+    p.add_argument(
+        "--allowed-domains",
+        nargs="*",
+        default=[],
+        help="List of allowed domains that the agent can navigate to."
+    )
     return p.parse_args()

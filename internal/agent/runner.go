@@ -6,5 +6,5 @@ import (
 )
 
 type AgentRunner interface {
-	RunAgent(prompt, outputPath string, filesToUpload []internal.FileToUpload, schemaContent string, targetDownloadDir string, logger *zerolog.Logger) ([]byte, error)
+	RunAgent(prompt, outputPath string, filesToUpload []internal.FileToUpload, schemaContent string, targetDownloadDir string, allowedDomains []string, logger *zerolog.Logger) ([]byte, error)
 }

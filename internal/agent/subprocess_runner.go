@@ -141,6 +141,7 @@ func (s *SubprocessAgentRunner) RunAgent(
 	filesToUpload []internal.FileToUpload,
 	schemaContent string,
 	targetDownloadDir string,
+	allowedDomains []string,
 	logger *zerolog.Logger,
 ) ([]byte, error) {
 	// Create a temporary directory for this specific agent run to place scripts
@@ -201,6 +202,10 @@ func (s *SubprocessAgentRunner) RunAgent(
 		cmdArgs = append(cmdArgs, "--target-download-dir", targetDownloadDir)
 	} else {
 		cmdArgs = append(cmdArgs, "--target-download-dir", "./output/")
+	}
+	if allowedDomains != nil {
+		cmdArgs = append(cmdArgs, "--allowed-domains")
+		cmdArgs = append(cmdArgs, allowedDomains...)
 	}
 
 	cmd := exec.Command(extractedRunScriptPath, cmdArgs...)

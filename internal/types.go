@@ -76,12 +76,13 @@ type Input struct {
 type Step struct {
 	ID               string         `yaml:"id"`
 	Uses             string         `yaml:"uses"`                   // 'browser_agent' | 'shell' | 'api'
-	Prompt           string         `yaml:"prompt,omitempty"`       // if (uses: browser) prompt template
+	Prompt           string         `yaml:"prompt,omitempty"`       // if (uses: browser_agent) prompt template
 	Run              *ShellRun 		`yaml:"run,omitempty"`          // (if uses: shell) command line
 	Call             *ApiCall       `yaml:"call,omitempty"`         // (if uses: api)
-	UploadFiles      []FileToUpload `yaml:"upload_files,omitempty"` // (if uses: browser) files to upload
-	TargetDownloadDir string 		`yaml:"download_dir,omitempty"` // (if uses: browser) target directory to place downloaded files 
-	OutputSchemaFile string         `yaml:"output_schema,omitempty"`
+	UploadFiles      []FileToUpload `yaml:"upload_files,omitempty"` // (if uses: browser_agent) files to upload
+	TargetDownloadDir string 		`yaml:"download_dir,omitempty"` // (if uses: browser_agent) target directory to place downloaded files 
+	OutputSchemaFile string         `yaml:"output_schema,omitempty"` // (if uses: browser_agent) path to JSON schema to use for LLM structured output
+	AllowedDomains []string `yaml:"allowed_domains,omitempty"` // (if uses: browser_agent) list of allowed domains
 }
 
 func (s *Step) Validate() error {

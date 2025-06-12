@@ -47,6 +47,9 @@ func (sh *ShellHandler) Validate() error {
 	if step.Call != nil {
 		return fmt.Errorf("shell step %q must not define 'call'", step.ID)
 	}
+	if step.AllowedDomains != nil {
+		return fmt.Errorf("shell step %q must not define 'allowed_domains'", step.ID)
+	}
 
 	if step.Run == nil {
 		return fmt.Errorf("shell step %q must define 'run'", step.ID)
