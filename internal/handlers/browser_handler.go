@@ -54,17 +54,17 @@ func (bh *BrowserHandler) Validate() error {
 		}
 
 		// Validate file exists
-		absPath, err := filepath.Abs(f.Path)
+		resolvedPath, err := internal.ResolvePathFromWorkflow(workflowDir, f.Path)
 		if err != nil {
-			return fmt.Errorf("step %q: failed to resolve absolute path for upload_files[%d] %q: %w", step.ID, i, f.Path, err)
+			return fmt.Errorf("step %q: failed to resolve path for upload_files[%d] %q: %w", step.ID, i, f.Path, err)
 		}
-		if _, err := os.Stat(absPath); err != nil {
-			return fmt.Errorf("step %q: upload_files[%d] file not found at path %q: %w", step.ID, i, absPath, err)
+		if _, err := os.Stat(resolvedPath); err != nil {
+			return fmt.Errorf("step %q: upload_files[%d] file not found at path %q: %w", step.ID, i, resolvedPath, err)
 		}
 	}
 
 	if step.OutputSchemaFile != "" {
-		resolvedPath, err := internal.ResolvePathFromWorkflow(workflowDir, step.TargetDownloadDir)
+		resolvedPath, err := internal.ResolvePathFromWorkflow(workflowDir, step.OutputSchemaFile)
 		if err != nil {
 			return fmt.Errorf("step %q: could not resolve output_schema path: %w", step.ID, err)
 		}
