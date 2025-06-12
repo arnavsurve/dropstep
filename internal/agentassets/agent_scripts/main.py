@@ -74,11 +74,12 @@ async def run_agent_logic():
         controller=controller,
         browser_session=browser_session,
         available_file_paths=args.upload_file_paths,
+        max_failures=args.max_failures,
     )
 
     result_json_str = None
     try:
-        history = await agent.run()
+        history = await agent.run(max_steps=args.max_steps)
         result_json_str = history.final_result()
 
         if result_json_str is not None:

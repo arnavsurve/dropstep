@@ -16,6 +16,8 @@ steps: # Ordered list of steps
     download_dir: string # (if uses: browser_agent) path to target download directory
     output_schema: string # (if uses: browser_agent) JSON schema for LLM structured output
     allowed_domains: [string] # (if uses: browser_agent) optional list of allowed domains for the agent's navigation
+    max_steps: int # (if uses: browser_agent) optional number of max steps an agent can take. Helps control execution times and prevent infinite loops. Default 100
+    max_failures: int # (if uses: browser_agent) optional number of max failures an agent can incur. Helps control execution times and prevent infinite loops. Default 3
 
     run: # (if uses: shell) command line
       path: string

@@ -14,6 +14,8 @@ steps:
     output_schema: "./schemas/download_schema.json"
     allowed_domains:
       - www.filesampleshub.com
+    max_steps: 5
+    max_failures: 1
 
   - id: verify_download
     uses: shell

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -138,6 +139,30 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if resolvedStep.MaxSteps != nil {
+		maxStepsString, err := resolver(strconv.Itoa(*resolvedStep.MaxSteps))
+		if err != nil {
+			return nil, err
+		}
+		maxStepsInt, err := strconv.Atoi(maxStepsString)
+		if err != nil {
+			return nil, err
+		}
+		resolvedStep.MaxSteps = &maxStepsInt
+	}
+
+	if resolvedStep.MaxFailures != nil {
+		maxFailuresString, err := resolver(strconv.Itoa(*resolvedStep.MaxFailures))
+		if err != nil {
+			return nil, err
+		}
+		maxFailuresInt, err := strconv.Atoi(maxFailuresString)
+		if err != nil {
+			return nil, err
+		}
+		resolvedStep.MaxFailures = &maxFailuresInt
 	}
 
 	return &resolvedStep, nil

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"sync"
 
 	"github.com/arnavsurve/dropstep/internal"
@@ -136,12 +137,10 @@ func NewSubprocessAgentRunner(logger *zerolog.Logger) (*SubprocessAgentRunner, e
 }
 
 func (s *SubprocessAgentRunner) RunAgent(
-	prompt,
-	rawOutputPath string,
-	filesToUpload []internal.FileToUpload,
-	schemaContent string,
-	targetDownloadDir string,
-	allowedDomains []string,
+	step internal.Step, 
+	rawOutputPath string, 
+	schemaContent string, 
+	targetDownloadDir string, 
 	logger *zerolog.Logger,
 ) ([]byte, error) {
 	// Create a temporary directory for this specific agent run to place scripts
@@ -184,10 +183,10 @@ func (s *SubprocessAgentRunner) RunAgent(
 	}
 	logger.Debug().Str("path", outputPath).Msg("Resolved path for agent output")
 
-	cmdArgs := []string{"--prompt", prompt, "--out", outputPath}
-	if len(filesToUpload) > 0 {
+	cmdArgs := []string{"--prompt", step.Prompt, "--out", outputPath}
+	if len(step.UploadFiles) > 0 {
 		cmdArgs = append(cmdArgs, "--upload-file-paths")
-		for _, f := range filesToUpload {
+		for _, f := range step.UploadFiles {
 			absPath, err := filepath.Abs(f.Path)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get abs path for upload %s: %w", f.Path, err)
@@ -203,9 +202,15 @@ func (s *SubprocessAgentRunner) RunAgent(
 	} else {
 		cmdArgs = append(cmdArgs, "--target-download-dir", "./output/")
 	}
-	if allowedDomains != nil {
+	if step.AllowedDomains != nil {
 		cmdArgs = append(cmdArgs, "--allowed-domains")
-		cmdArgs = append(cmdArgs, allowedDomains...)
+		cmdArgs = append(cmdArgs, step.AllowedDomains...)
+	}
+	if step.MaxSteps != nil {
+		cmdArgs = append(cmdArgs, "--max-steps", strconv.Itoa(*step.MaxSteps))
+	}
+	if step.MaxFailures != nil {
+		cmdArgs = append(cmdArgs, "--max-failures", strconv.Itoa(*step.MaxFailures))
 	}
 
 	cmd := exec.Command(extractedRunScriptPath, cmdArgs...)

@@ -75,6 +75,20 @@ func (bh *BrowserHandler) Validate() error {
 		}
 	}
 
+	if step.MaxSteps == nil {
+		// If MaxSteps is not defined, no need to validate
+		// Default value is handled in the Python subprocess 
+	} else if *step.MaxSteps <= 0 {
+		return fmt.Errorf("step %q: max_steps must be greater than 0", step.ID)
+	}
+
+	if step.MaxFailures == nil {
+		// If MaxFailures is not defined, no need to validate
+		// Default value is handled in the Python subprocess
+	} else if *step.MaxFailures < 0 {
+		return fmt.Errorf("step %q: max_failures must not be less than 0", step.ID)
+	}
+
 	return nil
 }
 
@@ -136,7 +150,7 @@ func (bh *BrowserHandler) Run() (*internal.StepResult, error) {
 	}
 
 	agentOutputPath := fmt.Sprintf("output/%s_output.json", step.ID)
-	jsonData, runErr := bh.Agent.RunAgent(step.Prompt, agentOutputPath, step.UploadFiles, outputSchemaJSONString, finalTargetDownloadDir, step.AllowedDomains, logger)
+	jsonData, runErr := bh.Agent.RunAgent(step, agentOutputPath, outputSchemaJSONString, finalTargetDownloadDir, logger)
 
 	if runErr != nil {
 		logger.Error().Err(runErr).Msg("Agent execution failed")

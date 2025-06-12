@@ -50,6 +50,9 @@ func (sh *ShellHandler) Validate() error {
 	if step.AllowedDomains != nil {
 		return fmt.Errorf("shell step %q must not define 'allowed_domains'", step.ID)
 	}
+	if step.MaxSteps != nil {
+		return fmt.Errorf("shell step %q must not define 'max_steps'", step.ID)
+	}
 
 	if step.Run == nil {
 		return fmt.Errorf("shell step %q must define 'run'", step.ID)

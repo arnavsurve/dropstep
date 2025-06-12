@@ -36,4 +36,16 @@ def parse_agent_args():
         default=[],
         help="List of allowed domains that the agent can navigate to."
     )
+    p.add_argument(
+        "--max-steps",
+        type=int,
+        default=100,
+        help="Maximum number of steps an agent can take before failing the execution run."
+    )
+    p.add_argument(
+        "--max-failures",
+        type=int,
+        default=3,
+        help="Maximum number of failures an agent can incur before failing the execution run."
+    )
     return p.parse_args()
