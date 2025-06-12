@@ -133,6 +133,13 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 		}
 	}
 
+	for i := range resolvedStep.AllowedDomains {
+		resolvedStep.AllowedDomains[i], err = resolver(resolvedStep.AllowedDomains[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &resolvedStep, nil
 }
 

@@ -69,6 +69,12 @@ func (bh *BrowserHandler) Validate() error {
 		}
 	}
 
+	for i, domain := range step.AllowedDomains {
+		if domain == "" {
+			return fmt.Errorf("step %q: allowed_domains[%d] must not be an empty string", step.ID, i)
+		}
+	}
+
 	return nil
 }
 

@@ -15,6 +15,7 @@ steps: # Ordered list of steps
         path: string
     download_dir: string # (if uses: browser_agent) path to target download directory
     output_schema: string # (if uses: browser_agent) JSON schema for LLM structured output
+    allowed_domains: [string] # (if uses: browser_agent) optional list of allowed domains for the agent's navigation
 
     run: # (if uses: shell) command line
       path: string
