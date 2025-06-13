@@ -265,8 +265,15 @@ func InjectVarsIntoWorkflow(wf *Workflow, globalVarCtx VarContext) (*Workflow, e
 	}
 
 	resolver := func(input string) string {
-		output, _ := resolveStringWithContext(input, globalVarCtx, nil) // Pass nil for results context
-		return output
+		return varRegex.ReplaceAllStringFunc(input, func(match string) string {
+			key := varRegex.FindStringSubmatch(match)[1]
+
+			if val, ok := globalVarCtx[key]; ok {
+				return val
+			}
+
+			return match
+		})
 	}
 
 	for i, step := range updatedWf.Steps {

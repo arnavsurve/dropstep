@@ -1,0 +1,6 @@
+name: test-x-post
+
+steps:
+  - id: peep-x
+    uses: browser_agent
+    prompt: Go to https://x.com/1arnavsurve/status/1933352661648355633 and tell me what you see.

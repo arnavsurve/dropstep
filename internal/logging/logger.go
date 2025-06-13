@@ -6,7 +6,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var BaseLogger zerolog.Logger
+var GlobalLogger zerolog.Logger
 
 func ConfigureGlobalLogger(router *LoggerRouter, wfId, wfRunID string) {
 	zerolog.TimeFieldFormat = time.RFC3339
@@ -14,7 +14,7 @@ func ConfigureGlobalLogger(router *LoggerRouter, wfId, wfRunID string) {
 		Router: router,
 	}
 
-	BaseLogger = zerolog.New(writer).
+	GlobalLogger = zerolog.New(writer).
 		With().
 		Timestamp().
 		Str("workflow_name", wfId).
@@ -23,7 +23,7 @@ func ConfigureGlobalLogger(router *LoggerRouter, wfId, wfRunID string) {
 }
 
 func ScopedLogger(stepId, stepType string) zerolog.Logger {
-	return BaseLogger.With().
+	return GlobalLogger.With().
 		Str("step_id", stepId).
 		Str("type", stepType).
 		Timestamp().

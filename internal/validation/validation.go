@@ -10,7 +10,7 @@ import (
 
 func ValidateWorkflowHandlers(wf *internal.Workflow, workflowDir string) error {
 	for _, step := range wf.Steps {
-		logging.BaseLogger.Info().Msgf("Validating step %q (uses=%s)", step.ID, step.Uses)
+		logging.GlobalLogger.Info().Msgf("Validating step %q (uses=%s)", step.ID, step.Uses)
 
 		scopedLogger := logging.ScopedLogger(step.ID, step.Uses)
 		ctx := internal.ExecutionContext{

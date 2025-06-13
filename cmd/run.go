@@ -14,11 +14,30 @@ import (
 )
 
 type RunCmd struct {
-	Varfile string `help:"The YAML varfile for input variables." default:"dsvars.yml"`
+	Varfile  string `help:"The YAML varfile for input variables." default:"dsvars.yml"`
 	Workflow string `help:"The workflow configuration file." default:"dropstep.yml"`
 }
 
 func (r *RunCmd) Run() error {
+	// Initialize file logger
+	fileSink, err := logging.NewFileSink("out.json")
+	if err != nil {
+		return fmt.Errorf("could not create file log sink: %w", err)
+	}
+
+	// Configure log router
+	router := &logging.LoggerRouter{
+		Sinks: []logging.LogSink{
+			&logging.ConsoleSink{},
+			fileSink,
+		},
+	}
+
+	// Configure base logger with placeholder values before loading workflow values
+	logging.ConfigureGlobalLogger(router, "pre-init", "pre-init")
+	log.Logger = logging.GlobalLogger
+
+	// Load .env
 	if err := godotenv.Load(); err != nil {
 		log.Warn().Err(err).Msg("No .env file found, relying on real ENV")
 	}
@@ -51,20 +70,6 @@ func (r *RunCmd) Run() error {
 		return fmt.Errorf("error validating workflow steps: %w", err)
 	}
 
-	// Initialize file logger
-	fileSink, err := logging.NewFileSink("out.json") 
-	if err != nil {
-		return fmt.Errorf("could not create file log sink: %w", err)
-	}
-
-	// Initialize logger router
-	router := &logging.LoggerRouter{
-		Sinks: []logging.LogSink{
-			&logging.ConsoleSink{},
-			fileSink,
-		},
-	}
-
 	// Graceful shutdown of logging sinks
 	defer func() {
 		fmt.Println("Shutting down logger...")
@@ -73,8 +78,9 @@ func (r *RunCmd) Run() error {
 		}
 	}()
 
+	// Update the global logger values
 	logging.ConfigureGlobalLogger(router, wf.Name, wfRunID)
-	log.Logger = logging.BaseLogger
+	log.Logger = logging.GlobalLogger
 
 	log.Info().Msg("Initialized workflow logger")
 	log.Info().Msgf("Starting workflow: %q (run ID: %s)", wf.Name, wfRunID)
@@ -83,7 +89,7 @@ func (r *RunCmd) Run() error {
 
 	// Run handlers
 	for _, step := range wf.Steps {
-		logging.BaseLogger.Info().Msgf("Running step %q (uses=%s)", step.ID, step.Uses)
+		log.Info().Msgf("Running step %q (uses=%s)", step.ID, step.Uses)
 
 		resolvedStep, err := internal.ResolveStepVariables(&step, varCtx, stepResults)
 		if err != nil {
@@ -92,8 +98,8 @@ func (r *RunCmd) Run() error {
 
 		scopedLogger := logging.ScopedLogger(resolvedStep.ID, resolvedStep.Uses)
 		ctx := internal.ExecutionContext{
-			Step: *resolvedStep,
-			Logger: &scopedLogger,
+			Step:        *resolvedStep,
+			Logger:      &scopedLogger,
 			WorkflowDir: workflowDir,
 		}
 
@@ -116,3 +122,4 @@ func (r *RunCmd) Run() error {
 	log.Info().Msg("Workflow completed successfully.")
 	return nil
 }
+

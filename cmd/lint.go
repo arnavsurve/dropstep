@@ -24,7 +24,7 @@ func (l *LintCmd) Run() error {
 	}
 
 	logging.ConfigureGlobalLogger(router, "none", "validation")
-	log.Logger = logging.BaseLogger
+	log.Logger = logging.GlobalLogger
 
 	log.Info().Msgf("Validating %s", l.Workflow)
 
