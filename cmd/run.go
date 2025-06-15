@@ -42,8 +42,8 @@ func (r *RunCmd) Run() error {
 		log.Warn().Err(err).Msg("No .env file found, relying on real ENV")
 	}
 
-	// Load workflow YAML
-	wf, err := internal.LoadWorkflowFromFile(r.Workflow)
+	// Load original workflow YAML
+	originalWf, err := internal.LoadWorkflowFromFile(r.Workflow)
 	if err != nil {
 		return fmt.Errorf("could not load workflow file: %w", err)
 	}
@@ -55,9 +55,6 @@ func (r *RunCmd) Run() error {
 	}
 	workflowDir := filepath.Dir(workflowAbsPath)
 
-	// Generate workflow run UUID
-	wfRunID := uuid.New().String()
-
 	// Load varfile YAML
 	varCtx, err := internal.ResolveVarfile(r.Varfile)
 	if err != nil {
@@ -65,10 +62,19 @@ func (r *RunCmd) Run() error {
 		varCtx = make(internal.VarContext)
 	}
 
-	// Validate each handler YAML definition
-	if err := validation.ValidateWorkflowHandlers(wf, workflowDir); err != nil {
+	// Create a temporary, resolved copy of the workflow for validation
+	validationWf, err := internal.InjectVarsIntoWorkflow(originalWf, varCtx)
+	if err != nil {
+		return fmt.Errorf("could not resolve global variables for workflow validation: %w", err)
+	}
+
+	// Validate the handlers using the temporary workflow
+	if err := validation.ValidateWorkflowHandlers(validationWf, workflowDir); err != nil {
 		return fmt.Errorf("error validating workflow steps: %w", err)
 	}
+
+	// Generate workflow run UUID
+	wfRunID := uuid.New().String()
 
 	// Graceful shutdown of logging sinks
 	defer func() {
@@ -79,21 +85,21 @@ func (r *RunCmd) Run() error {
 	}()
 
 	// Update the global logger values
-	logging.ConfigureGlobalLogger(router, wf.Name, wfRunID)
+	logging.ConfigureGlobalLogger(router, originalWf.Name, wfRunID)
 	log.Logger = logging.GlobalLogger
 
 	log.Info().Msg("Initialized workflow logger")
-	log.Info().Msgf("Starting workflow: %q (run ID: %s)", wf.Name, wfRunID)
+	log.Info().Msgf("Starting workflow: %q (run ID: %s)", originalWf.Name, wfRunID)
 
 	stepResults := make(internal.StepResultsContext)
 
-	// Run handlers
-	for _, step := range wf.Steps {
+	// Run handlers using the original workflow object
+	for _, step := range originalWf.Steps {
 		log.Info().Msgf("Running step %q (uses=%s)", step.ID, step.Uses)
 
 		resolvedStep, err := internal.ResolveStepVariables(&step, varCtx, stepResults)
 		if err != nil {
-			return fmt.Errorf("could not resolve variales for step %q: %w", step.ID, err)
+			return fmt.Errorf("could not resolve variables for step %q: %w", step.ID, err)
 		}
 
 		scopedLogger := logging.ScopedLogger(resolvedStep.ID, resolvedStep.Uses)
@@ -122,4 +128,3 @@ func (r *RunCmd) Run() error {
 	log.Info().Msg("Workflow completed successfully.")
 	return nil
 }
-

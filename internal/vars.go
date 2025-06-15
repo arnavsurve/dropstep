@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -61,74 +62,91 @@ func ResolveVarfile(path string) (VarContext, error) {
 	return resolvedCtx, nil
 }
 
-// ResolveStepVariables takes a single step and resolves all its templated fields
-// using the global context and the results of previously executed steps.
+// ResolveStepVariables takes a single step and resolves all its templated
+// fields using the global context and the results of previously executed steps.
 func ResolveStepVariables(step *Step, globals VarContext, results StepResultsContext) (*Step, error) {
 	// Create a deep copy of the step to avoid modifying the original workflow definition.
-	// A simple marshal/unmarshal to YAML is an effective way to deep copy these structs.
 	var resolvedStep Step
 	b, _ := yaml.Marshal(step)
 	if err := yaml.Unmarshal(b, &resolvedStep); err != nil {
 		return nil, fmt.Errorf("failed to deep copy step for resolution: %w", err)
 	}
 
+	resolutionCtx := make(VarContext)
+	for k, v := range globals {
+		resolutionCtx[k] = v
+	}
+
+	// For each file, resolve its path first, then add its `name` as a variable
+	// that resolves to the basename of the path
+	for i, file := range resolvedStep.UploadFiles {
+		resolvedPath, err := resolveStringWithContext(file.Path, globals, results)
+		if err != nil {
+			return nil, fmt.Errorf("could not resolve path for file variable %q: %w", file.Name, err)
+		}
+		// Update the path on our step-in-progress
+		resolvedStep.UploadFiles[i].Path = resolvedPath
+		// Add the file's `name` to our special resolution context
+		resolutionCtx[file.Name] = filepath.Base(resolvedPath)
+	}
+
 	var err error
 	resolver := func(input string) (string, error) {
-		return resolveStringWithContext(input, globals, results)
+		return resolveStringWithContext(input, resolutionCtx, results)
 	}
 
 	// Resolve all string fields in the step
 	resolvedStep.Prompt, err = resolver(resolvedStep.Prompt)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not resolve prompt for step %q: %w", step.ID, err)
 	}
 	resolvedStep.TargetDownloadDir, err = resolver(resolvedStep.TargetDownloadDir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not resolve target download dir for step %q: %w", step.ID, err)
 	}
 	resolvedStep.OutputSchemaFile, err = resolver(resolvedStep.OutputSchemaFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not resolve output schema file for step %q: %w", step.ID, err)
 	}
 
 	for i := range resolvedStep.UploadFiles {
 		resolvedStep.UploadFiles[i].Path, err = resolver(resolvedStep.UploadFiles[i].Path)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not resolve path for file variable %q: %w", resolvedStep.UploadFiles[i].Name, err)
 		}
 	}
 
 	if resolvedStep.Run != nil {
 		resolvedStep.Run.Path, err = resolver(resolvedStep.Run.Path)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not resolve path for run variable %q: %w", resolvedStep.Run.Path, err)
 		}
 		resolvedStep.Run.Inline, err = resolver(resolvedStep.Run.Inline)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not resolve inline for run variable %q: %w", resolvedStep.Run.Inline, err)
 		}
 		resolvedStep.Run.Interpreter, err = resolver(resolvedStep.Run.Interpreter)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not resolve interpreter for run variable %q: %w", resolvedStep.Run.Interpreter, err)
 		}
 	}
 
 	if resolvedStep.Call != nil {
 		resolvedStep.Call.Url, err = resolver(resolvedStep.Call.Url)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not resolve URL for call variable %q: %w", resolvedStep.Call.Url, err)
 		}
 		for k, v := range resolvedStep.Call.Headers {
 			resolvedStep.Call.Headers[k], err = resolver(v)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("could not resolve header %q for call variable %q: %w", k, resolvedStep.Call.Url, err)
 			}
 		}
 		for k, v := range resolvedStep.Call.Body {
 			if strVal, ok := v.(string); ok {
 				resolvedStep.Call.Body[k], err = resolver(strVal)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("could not resolve body %q for call variable %q: %w", k, resolvedStep.Call.Url, err)
 				}
 			}
 		}
@@ -137,18 +155,18 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 	for i := range resolvedStep.AllowedDomains {
 		resolvedStep.AllowedDomains[i], err = resolver(resolvedStep.AllowedDomains[i])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not resolve allowed domain %q: %w", resolvedStep.AllowedDomains[i], err)
 		}
 	}
 
 	if resolvedStep.MaxSteps != nil {
 		maxStepsString, err := resolver(strconv.Itoa(*resolvedStep.MaxSteps))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not resolve max steps %q: %w", *resolvedStep.MaxSteps, err)
 		}
 		maxStepsInt, err := strconv.Atoi(maxStepsString)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not resolve max steps %q: %w", *resolvedStep.MaxSteps, err)
 		}
 		resolvedStep.MaxSteps = &maxStepsInt
 	}
@@ -156,11 +174,11 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 	if resolvedStep.MaxFailures != nil {
 		maxFailuresString, err := resolver(strconv.Itoa(*resolvedStep.MaxFailures))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not resolve max failures %q: %w", *resolvedStep.MaxFailures, err)
 		}
 		maxFailuresInt, err := strconv.Atoi(maxFailuresString)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not resolve max failures %q: %w", *resolvedStep.MaxFailures, err)
 		}
 		resolvedStep.MaxFailures = &maxFailuresInt
 	}
@@ -280,10 +298,17 @@ func InjectVarsIntoWorkflow(wf *Workflow, globalVarCtx VarContext) (*Workflow, e
 		s := step // Work on a copy
 		s.Prompt = resolver(s.Prompt)
 		s.TargetDownloadDir = resolver(s.TargetDownloadDir)
+
+		for j := range s.UploadFiles {
+			s.UploadFiles[j].Path = resolver(s.UploadFiles[j].Path)
+		}
+
 		if s.Run != nil {
 			s.Run.Inline = resolver(s.Run.Inline)
+			s.Run.Path = resolver(s.Run.Path)
+			s.Run.Interpreter = resolver(s.Run.Interpreter)
 		}
-		// Limited resolution for linting is sufficient
+
 		updatedWf.Steps[i] = s
 	}
 

@@ -84,7 +84,7 @@ type Step struct {
 	OutputSchemaFile string         `yaml:"output_schema,omitempty"` // (if uses: browser_agent) path to JSON schema to use for LLM structured output
 	AllowedDomains []string `yaml:"allowed_domains,omitempty"` // (if uses: browser_agent) list of allowed domains
 	MaxSteps *int `yaml:"max_steps,omitempty"` // (if uses: browser_agent) max number of steps an agent can take
-	MaxFailures *int `yaml:"max_failures,omitempty"` // (if uses: browser_agent) max number of steps an agent can take
+	MaxFailures *int `yaml:"max_failures,omitempty"` // (if uses: browser_agent) max number of failures an agent can incur
 }
 
 func (s *Step) Validate() error {

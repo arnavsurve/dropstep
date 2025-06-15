@@ -149,3 +149,33 @@ async def click_and_wait_for_download_impl(
 
     except Exception as e:
         return ActionResult(error=f"Error during click and download for element index {index}: {type(e).__name__} - {str(e)}")
+
+async def force_click_element_impl(
+    selector: str,
+    browser_session: BrowserSession,
+) -> ActionResult:
+    """
+    Forcefully clicks an element using a CSS selector by executing a JavaScript click event.
+    This bypasses some of the library's default checks and can be used when a normal click fails.
+    Useful for elements that are complex or are being misidentified by the standard click action.
+    Example selector: '[data-testid="submit-request-button"]'
+    """
+    page = await browser_session.get_current_page()
+    if not page:
+        return ActionResult(error="No active page found in browser session.")
+    try:
+        element_handle = await page.query_selector(selector)
+        if not element_handle:
+            return ActionResult(error=f"Element with selector {selector} not found.")
+        
+        await element_handle.evaluate("element => element.click()")
+        
+        await page.wait_for_timeout(500)
+
+        return ActionResult(
+            extracted_content=f"Successfully clicked element with selector {selector}.",
+            include_in_memory=True
+        )
+    except Exception as e:
+        return ActionResult(error=f"Error during force click for element with selector {selector}: {type(e).__name__} - {str(e)}")
+    

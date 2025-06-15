@@ -49,6 +49,9 @@ async def run_agent_logic():
     controller.action(
         "Clicks an element (by index) expected to trigger a file download and waits..."
     )(actions.click_and_wait_for_download_impl)
+    controller.action(
+        "Forcefully clicks an element using a CSS selector by executing a JavaScript click event. Use this as a fallback if a normal click doesn't work."
+    )(actions.force_click_element_impl)
 
     api_key = settings.get_openai_api_key()
     llm_instance = ChatOpenAI(
