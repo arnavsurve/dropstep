@@ -38,7 +38,7 @@ func (bh *BrowserHandler) Validate() error {
 		return fmt.Errorf("browser_agent step %q must define 'prompt'", step.ID)
 	}
 
-	if step.Run != nil {
+	if step.Command != nil {
 		return fmt.Errorf("browser_agent step %q must not define 'run'", step.ID)
 	}
 	if step.Call != nil {
@@ -95,7 +95,7 @@ func (bh *BrowserHandler) Validate() error {
 
 	if step.MaxSteps == nil {
 		// If MaxSteps is not defined, no need to validate
-		// Default value is handled in the Python subprocess 
+		// Default value is handled in the Python subprocess
 	} else if *step.MaxSteps <= 0 {
 		return fmt.Errorf("step %q: max_steps must be greater than 0", step.ID)
 	}
@@ -197,7 +197,7 @@ func (bh *BrowserHandler) Run() (*internal.StepResult, error) {
 	logger.Info().RawJSON("output", prettyOutput).Msg("Received agent output")
 
 	result := &internal.StepResult{
-		Output: outputData,
+		Output:     outputData,
 		OutputFile: agentOutputPath,
 	}
 

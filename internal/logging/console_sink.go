@@ -18,6 +18,7 @@ func (c *ConsoleSink) Write(level zerolog.Level, event map[string]any) {
 	source := getString(event, "source")
 	agentLine := getString(event, "agent_line")
 	shellLine := getString(event, "shell_line")
+	pythonLine := getString(event, "python_line")
 	errorMsg := getString(event, "error")
 	timestamp := getString(event, "time")
 
@@ -53,6 +54,14 @@ func (c *ConsoleSink) Write(level zerolog.Level, event map[string]any) {
 			color.CyanString(stepLabel),
 			color.BlueString(source),	
 			shellLine)
+
+	case pythonLine != "" && source != "":
+		fmt.Printf("[%s %s] %s: [python/%s]: %s\n",
+			levelFmt(strings.ToUpper(level.String())),
+			timestampFmt(timestamp),
+			color.CyanString(stepLabel),
+			color.BlueString(source),	
+			pythonLine)
 
 	case errorMsg != "":
 		fmt.Printf("[%s %s] %s: %s\n",

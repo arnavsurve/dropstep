@@ -7,7 +7,7 @@ inputs: # Required user inputs
 
 steps: # Ordered list of steps
   - id: string # Unique step ID
-    uses: string # 'browser_agent' | 'shell' | 'api' | plugin ref
+    uses: string # 'browser_agent' | 'shell' | 'python' | 'api'
 
     prompt: string # (if uses: browser_agent) prompt template
     upload_files: # (if uses: browser_agent) files to upload

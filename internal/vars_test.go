@@ -62,7 +62,7 @@ func TestResolveStepVariables(t *testing.T) {
 	step := &Step{
 		ID:     "current_step",
 		Prompt: "Process user {{ steps.prev_step.output }} from {{ domain }}.",
-		Run: &ShellRun{
+		Command: &CommandBlock{
 			Inline: "cat {{ steps.prev_step.output_file }}",
 		},
 	}
@@ -71,7 +71,7 @@ func TestResolveStepVariables(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "Process user user123 from example.com.", resolved.Prompt)
-	assert.Equal(t, "cat /data/prev_output.txt", resolved.Run.Inline)
+	assert.Equal(t, "cat /data/prev_output.txt", resolved.Command.Inline)
 }
 
 func TestResolveStringWithContext_UndefinedVar(t *testing.T) {

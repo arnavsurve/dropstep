@@ -117,18 +117,18 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 		}
 	}
 
-	if resolvedStep.Run != nil {
-		resolvedStep.Run.Path, err = resolver(resolvedStep.Run.Path)
+	if resolvedStep.Command != nil {
+		resolvedStep.Command.Path, err = resolver(resolvedStep.Command.Path)
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve path for run variable %q: %w", resolvedStep.Run.Path, err)
+			return nil, fmt.Errorf("could not resolve path for run variable %q: %w", resolvedStep.Command.Path, err)
 		}
-		resolvedStep.Run.Inline, err = resolver(resolvedStep.Run.Inline)
+		resolvedStep.Command.Inline, err = resolver(resolvedStep.Command.Inline)
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve inline for run variable %q: %w", resolvedStep.Run.Inline, err)
+			return nil, fmt.Errorf("could not resolve inline for run variable %q: %w", resolvedStep.Command.Inline, err)
 		}
-		resolvedStep.Run.Interpreter, err = resolver(resolvedStep.Run.Interpreter)
+		resolvedStep.Command.Interpreter, err = resolver(resolvedStep.Command.Interpreter)
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve interpreter for run variable %q: %w", resolvedStep.Run.Interpreter, err)
+			return nil, fmt.Errorf("could not resolve interpreter for run variable %q: %w", resolvedStep.Command.Interpreter, err)
 		}
 	}
 
@@ -322,10 +322,10 @@ func InjectVarsIntoWorkflow(wf *Workflow, globalVarCtx VarContext) (*Workflow, e
 			s.UploadFiles[j].Path = resolver(s.UploadFiles[j].Path)
 		}
 
-		if s.Run != nil {
-			s.Run.Inline = resolver(s.Run.Inline)
-			s.Run.Path = resolver(s.Run.Path)
-			s.Run.Interpreter = resolver(s.Run.Interpreter)
+		if s.Command != nil {
+			s.Command.Inline = resolver(s.Command.Inline)
+			s.Command.Path = resolver(s.Command.Path)
+			s.Command.Interpreter = resolver(s.Command.Interpreter)
 		}
 
 		updatedWf.Steps[i] = s

@@ -53,14 +53,17 @@ func (sh *ShellHandler) Validate() error {
 	if step.MaxSteps != nil {
 		return fmt.Errorf("shell step %q must not define 'max_steps'", step.ID)
 	}
+	if step.MaxFailures != nil {
+		return fmt.Errorf("shell step %q must not define 'max_failures'", step.ID)
+	}
 
-	if step.Run == nil {
+	if step.Command == nil {
 		return fmt.Errorf("shell step %q must define 'run'", step.ID)
 	} else {
-		if step.Run.Inline != "" && step.Run.Path != "" {
+		if step.Command.Inline != "" && step.Command.Path != "" {
 			return fmt.Errorf("shell step %q must only define either 'inline' or 'path'", step.ID)
 		}
-		if step.Run.Inline == "" && step.Run.Path == "" {
+		if step.Command.Inline == "" && step.Command.Path == "" {
 			return fmt.Errorf("shell step %q must define either 'inline' or 'path'", step.ID)
 		}
 	}
@@ -73,21 +76,21 @@ func (sh *ShellHandler) Run() (*internal.StepResult, error) {
 	logger := sh.StepCtx.Logger
 	workflowDir := sh.StepCtx.WorkflowDir
 
-	isInline := step.Run.Inline != ""
+	isInline := step.Command.Inline != ""
 	if !isInline {
-		resolvedPath, err := internal.ResolvePathFromWorkflow(workflowDir, step.Run.Path)
+		resolvedPath, err := internal.ResolvePathFromWorkflow(workflowDir, step.Command.Path)
 		if err != nil {
 			return nil, fmt.Errorf("error resolving script path: %w", err)
 		}
 		if _, err := os.Stat(resolvedPath); err != nil {
 			return nil, fmt.Errorf("script file not found at %q: %w", resolvedPath, err)
 		}
-		step.Run.Path = resolvedPath
+		step.Command.Path = resolvedPath
 	}
 
 	interpreter := "/bin/bash"
-	if step.Run.Interpreter != "" {
-		interpreter = step.Run.Interpreter
+	if step.Command.Interpreter != "" {
+		interpreter = step.Command.Interpreter
 	}
 
 	var cmd *exec.Cmd
@@ -102,15 +105,15 @@ func (sh *ShellHandler) Run() (*internal.StepResult, error) {
 	cmd.Stderr = &stderrBuf
 
 	logger.Info().Str("shell", interpreter).Msg("Starting shell script execution")
-	
+
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("error executing script: %w", err)
 	}
 
 	waitErr := cmd.Wait()
 
-	logBuffer(strings.NewReader(stderrBuf.String()), "STDERR", logger)
-	logBuffer(strings.NewReader(stdoutBuf.String()), "STDOUT", logger)
+	logBuffer(strings.NewReader(stderrBuf.String()), "STDERR", logger, "shell_line")
+	logBuffer(strings.NewReader(stdoutBuf.String()), "STDOUT", logger, "shell_line")
 
 	if waitErr != nil {
 		if exitErr, ok := waitErr.(*exec.ExitError); ok {
@@ -135,30 +138,23 @@ func (sh *ShellHandler) Run() (*internal.StepResult, error) {
 
 func (sh *ShellHandler) getInlineCommand(interpreter string) *exec.Cmd {
 	logger := sh.StepCtx.Logger
-	inlineScript := sh.StepCtx.Step.Run.Inline
+	inlineScript := sh.StepCtx.Step.Command.Inline
 	if len(inlineScript) > 1000 {
 		logger.Warn().Msg("Long script in 'inline' - consider passing a script file as 'path' for maintainability.")
 	}
+	// #nosec G204
 	safeScript := "set -euo pipefail\n" + inlineScript
 	shellCmd := exec.Command(interpreter, "-c", safeScript)
 	return shellCmd
 }
 
 func (sh *ShellHandler) getFileCommand(interpreter string) *exec.Cmd {
-	scriptPath := sh.StepCtx.Step.Run.Path
+	scriptPath := sh.StepCtx.Step.Command.Path
+	// #nosec G204
 	shellCmd := exec.Command(interpreter, scriptPath)
 	return shellCmd
 }
 
-func logBuffer(r io.Reader, source string, logger *zerolog.Logger) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		logger.Info().
-			Str("source", source).
-			Str("shell_line", scanner.Text()).
-			Msg("Shell output")
-	}
-}
 
 // Deprecated, keeping here in case streaming is reintroduced
 func streamOutputStructured(r io.Reader, wg *sync.WaitGroup, source string, logger *zerolog.Logger) {
@@ -173,7 +169,7 @@ func streamOutputStructured(r io.Reader, wg *sync.WaitGroup, source string, logg
 	if err := scanner.Err(); err != nil && err != io.EOF {
 		if errors.Is(err, io.EOF) || errors.Is(err, os.ErrClosed) {
 			return
-		}	
+		}
 		logger.Error().Err(err).Str("source", source).Msg("Unexpected error streaming agent output")
 	}
 }
