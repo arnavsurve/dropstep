@@ -7,3 +7,5 @@ downloads/
 **/__pycache__/
 main
 dropstep
+out.json
+.dropstep
