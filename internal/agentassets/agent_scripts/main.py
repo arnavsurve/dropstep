@@ -71,6 +71,12 @@ async def run_agent_logic():
 
     browser_session = BrowserSession(**browser_session_args) 
 
+    extend_system_message = """
+    When clicking on an element, default to the force_click_element_impl action. If that fails, use the click_element_by_index action.
+    When downloading a file, use the click_and_wait_for_download_impl action. Be sure to follow this with a get_last_downloaded_file_info_impl action to confirm the file was downloaded and note file path and metadata.
+    When uploading a file, use the upload_file_impl action.
+    """
+
     agent = Agent(
         task=args.prompt,
         llm=llm_instance,
@@ -78,6 +84,7 @@ async def run_agent_logic():
         browser_session=browser_session,
         available_file_paths=args.upload_file_paths,
         max_failures=args.max_failures,
+        extend_system_message=extend_system_message,
     )
 
     result_json_str = None

@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -212,7 +213,15 @@ func resolveStringWithContext(input string, globals VarContext, results StepResu
 
 // findValueInContext orchestrates the lookup for a variable.
 func findValueInContext(key string, globals VarContext, results StepResultsContext) (interface{}, bool) {
-	// 1. Try to resolve as a `steps` variable
+	wantsJSON := strings.HasSuffix(key, ".json")
+	if wantsJSON {
+		key = strings.TrimSuffix(key, ".json")
+	}
+
+	var value interface{}
+	var found bool
+
+	// Try to resolve as a `steps` variable
 	if strings.HasPrefix(key, "steps.") {
 		parts := strings.Split(key, ".")
 		if len(parts) < 3 { // Must be at least `steps.id.field`
@@ -224,22 +233,32 @@ func findValueInContext(key string, globals VarContext, results StepResultsConte
 		if result, ok := results[stepID]; ok {
 			switch field {
 			case "output":
-				return getNestedValue(result.Output, parts[3:])
+				value, found = getNestedValue(result.Output, parts[3:])
 			case "output_file":
 				if len(parts) == 3 {
-					return result.OutputFile, true
+					value, found = result.OutputFile, true
 				}
 			}
 		}
-		return nil, false // Step or field not found
+	} else {
+		if val, ok := globals[key]; ok {
+			value, found = val, true
+		}
 	}
 
-	// 2. Fallback to global variables
-	if val, ok := globals[key]; ok {
-		return val, true
+	if !found {
+		return nil, false
 	}
 
-	return nil, false
+	if wantsJSON {
+		jsonBytes, err := json.Marshal(value)
+		if err != nil {
+			return fmt.Sprintf("{\"error\": \"failed to marshal to json: %v\"}", err), true
+		}
+		return string(jsonBytes), true
+	}
+
+	return value, true
 }
 
 // getNestedValue traverses a data structure (map or string) using a path slice.
