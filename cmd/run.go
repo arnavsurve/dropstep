@@ -72,6 +72,11 @@ func (r *RunCmd) Run() error {
 		varCtx = make(internal.VarContext)
 	}
 
+	// Validate required inputs
+	if err := validation.ValidateRequiredInputs(originalWf, varCtx); err != nil {
+		return err
+	}
+
 	resolvedProviders := make(map[string]internal.ProviderConfig)
 	for _, p := range originalWf.Providers {
 		resolvedP, err := internal.ResolveProviderVariables(&p, varCtx)

@@ -53,6 +53,11 @@ func (l *LintCmd) Run() error {
 		varCtx = make(internal.VarContext)
 	}
 
+	// Validate required inputs
+	if err := validation.ValidateRequiredInputs(wf, varCtx); err != nil {
+		return err
+	}
+
 	// Resolve and merge input vars into workflow file (globals only for linting)
 	wf, err = internal.InjectVarsIntoWorkflow(wf, varCtx)
 	if err != nil {

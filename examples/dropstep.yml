@@ -4,9 +4,12 @@ description: This is a sample workflow for testing the Dropstep CLI.
 inputs:
   - name: url
     type: string
-    required: true
+    required: false
   - name: openai_key
     type: string
+    required: true
+  - name: asdf
+    type: file
     required: true
 
 providers:
