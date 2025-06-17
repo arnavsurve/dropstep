@@ -6,5 +6,5 @@ import (
 )
 
 type AgentRunner interface {
-	RunAgent(step internal.Step, rawOutputPath string, schemaContent string, targetDownloadDir string, logger *zerolog.Logger) ([]byte, error)
+	RunAgent(step internal.Step, rawOutputPath string, schemaContent string, targetDownloadDir string, logger *zerolog.Logger, apiKey string) ([]byte, error)
 }

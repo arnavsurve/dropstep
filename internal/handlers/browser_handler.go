@@ -38,6 +38,10 @@ func (bh *BrowserHandler) Validate() error {
 		return fmt.Errorf("browser_agent step %q must define 'prompt'", step.ID)
 	}
 
+	if step.Provider == "" {
+		return fmt.Errorf("browser_agent step %q must specify a 'provider'", step.ID)
+	}
+
 	if step.Command != nil {
 		return fmt.Errorf("browser_agent step %q must not define 'run'", step.ID)
 	}
@@ -178,7 +182,14 @@ func (bh *BrowserHandler) Run() (*internal.StepResult, error) {
 	}
 
 	agentOutputPath := fmt.Sprintf("output/%s_output.json", step.ID)
-	jsonData, runErr := bh.Agent.RunAgent(agentStep, agentOutputPath, outputSchemaJSONString, finalTargetDownloadDir, logger)
+	jsonData, runErr := bh.Agent.RunAgent(
+		agentStep,
+		agentOutputPath,
+		outputSchemaJSONString,
+		finalTargetDownloadDir,
+		logger,
+		bh.StepCtx.APIKey,
+	)
 
 	if runErr != nil {
 		logger.Error().Err(runErr).Msg("Agent execution failed")

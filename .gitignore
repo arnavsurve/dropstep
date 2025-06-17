@@ -5,3 +5,5 @@ output/
 downloads/
 **/.claude/
 **/__pycache__/
+main
+dropstep

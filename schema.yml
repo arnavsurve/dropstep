@@ -5,9 +5,15 @@ inputs: # Required user inputs
     type: string # string | file | number | boolean
     required: boolean
 
+providers: # Optional configurations for external services like LLM providers
+  - name: string # A unique, user-defined name for this provider configuration
+    type: string # The type of provider (e.g. 'openai')
+    api_key: string # The API key, which can be a raw string or an '{{ env.VAR }}' template
+
 steps: # Ordered list of steps
   - id: string # Unique step ID
     uses: string # 'browser_agent' | 'shell' | 'python' | 'api'
+    provider: string # (if uses: browser_agent) The name of the provider to use for this step
 
     prompt: string # (if uses: browser_agent) prompt template
     upload_files: # (if uses: browser_agent) files to upload

@@ -333,3 +333,20 @@ func InjectVarsIntoWorkflow(wf *Workflow, globalVarCtx VarContext) (*Workflow, e
 
 	return &updatedWf, nil
 }
+
+func ResolveProviderVariables(p *ProviderConfig, globals VarContext) (*ProviderConfig, error) {
+	// Create a deep copy to avoid modifying the original
+	var resolvedProvider ProviderConfig
+	b, _ := yaml.Marshal(p)
+	if err := yaml.Unmarshal(b, &resolvedProvider); err != nil {
+		return nil, fmt.Errorf("failed to deep copy provider for resolution: %w", err)
+	}
+
+	resolvedKey, err := resolveStringWithContext(resolvedProvider.APIKey, globals, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not resolve 'api_key' for provider %q: %w", p.Name, err)
+	}
+	resolvedProvider.APIKey = resolvedKey
+
+	return &resolvedProvider, nil
+}

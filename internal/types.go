@@ -14,11 +14,18 @@ type StepResult struct {
 
 type StepResultsContext = map[string]StepResult
 
+type ProviderConfig struct {
+	Name   string `yaml:"name"`
+	Type   string `yaml:"type"`
+	APIKey string `yaml:"api_key"`
+}
+
 type Workflow struct {
-	Name        string  `yaml:"name"`
-	Description string  `yaml:"description"`
-	Inputs      []Input `yaml:"inputs"`
-	Steps       []Step  `yaml:"steps"`
+	Name        string           `yaml:"name"`
+	Description string           `yaml:"description"`
+	Inputs      []Input          `yaml:"inputs"`
+	Providers   []ProviderConfig `yaml:"providers,omitempty"`
+	Steps       []Step           `yaml:"steps"`
 }
 
 // Validate checks fields at the workflow level, validating workflow name, input types/uniqueness, and step uniqueness.
@@ -49,6 +56,21 @@ func (wf *Workflow) Validate() error {
 		}
 	}
 
+	providerNames := make(map[string]bool)
+	for i, provider := range wf.Providers {
+		if provider.Name == "" {
+			return fmt.Errorf("provider %d is missing 'name'", i)
+		}
+		if providerNames[provider.Name] {
+			return fmt.Errorf("duplicate provider name: %q", provider.Name)
+		}
+		providerNames[provider.Name] = true
+
+		if provider.Type == "" {
+			return fmt.Errorf("provider %q is missing 'type'", provider.Name)
+		}
+	}
+
 	stepIDs := make(map[string]bool)
 	for i, step := range wf.Steps {
 		if step.ID == "" {
@@ -76,6 +98,7 @@ type Input struct {
 type Step struct {
 	ID                string         `yaml:"id"`
 	Uses              string         `yaml:"uses"`                      // 'browser_agent' | 'shell' | 'api'
+	Provider          string         `yaml:"provider,omitempty"`        // (if uses: browser_agent) The name of the provider to use for this step
 	Prompt            string         `yaml:"prompt,omitempty"`          // if (uses: browser_agent) prompt template
 	Command           *CommandBlock  `yaml:"run,omitempty"`             // (if uses: shell) command line
 	Call              *ApiCall       `yaml:"call,omitempty"`            // (if uses: api)
@@ -148,4 +171,5 @@ type ExecutionContext struct {
 	Step        Step
 	Logger      *zerolog.Logger
 	WorkflowDir string
+	APIKey      string
 }

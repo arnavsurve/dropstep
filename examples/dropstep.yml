@@ -5,24 +5,26 @@ inputs:
   - name: url
     type: string
     required: true
-  # - name: resume_path
-  #   type: string
-  #   required: true
+  - name: openai_key
+    type: string
+    required: true
+
+providers:
+  - name: openai
+    type: openai
+    api_key: "{{ openai_key }}"
 
 steps:
   - id: test_file_download
     uses: browser_agent
+    provider: openai
     prompt: Go to {{url}} and download sample1.txt.
-    # upload_files:
-    #   - name: resume
-    #     path: "{{ resume_path }}"
     download_dir: "./downloads/"
     output_schema: "./schemas/download_schema.json"
 
-  # - id: test_shell_script
-  #   uses: shell
-  #   run:
-  #     inline: |
-  #       echo "Hello world!"
-  #       pwd
-  #     interpreter: zsh
+
+  - id: test_python
+    uses: python
+    run:
+      interpreter: python3
+      inline: print("hello")

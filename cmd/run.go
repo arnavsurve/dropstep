@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/arnavsurve/dropstep/internal"
@@ -16,6 +17,15 @@ import (
 type RunCmd struct {
 	Varfile  string `help:"The YAML varfile for input variables." default:"dsvars.yml"`
 	Workflow string `help:"The workflow configuration file." default:"dropstep.yml"`
+}
+
+func getFallbackKey(providerType string) string {
+	switch providerType {
+	case "openai":
+		return os.Getenv("OPENAI_API_KEY")
+	default:
+		return ""
+	}
 }
 
 func (r *RunCmd) Run() error {
@@ -60,6 +70,15 @@ func (r *RunCmd) Run() error {
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not resolve varfile, proceeding without global variables")
 		varCtx = make(internal.VarContext)
+	}
+
+	resolvedProviders := make(map[string]internal.ProviderConfig)
+	for _, p := range originalWf.Providers {
+		resolvedP, err := internal.ResolveProviderVariables(&p, varCtx)
+		if err != nil {
+			return fmt.Errorf("could not resolve variables for provider %q: %w", p.Name, err)
+		}
+		resolvedProviders[p.Name] = *resolvedP
 	}
 
 	// Create a temporary, resolved copy of the workflow for validation
@@ -107,6 +126,24 @@ func (r *RunCmd) Run() error {
 			Step:        *resolvedStep,
 			Logger:      &scopedLogger,
 			WorkflowDir: workflowDir,
+		}
+
+		if resolvedStep.Uses == "browser_agent" {
+			providerConf, found := resolvedProviders[resolvedStep.Provider]
+			if !found {
+				return fmt.Errorf("step %q references provider %q, which is not defined in the 'providers' block", resolvedStep.ID, resolvedStep.Provider)
+			}
+
+			finalAPIKey := providerConf.APIKey
+			if finalAPIKey == "" {
+				finalAPIKey = getFallbackKey(providerConf.Type)
+			}
+
+			if finalAPIKey == "" {
+				return fmt.Errorf("API key for provider %q is not defined in the workflow or the expected environment variable", resolvedStep.Provider)
+			}
+
+			ctx.APIKey = finalAPIKey
 		}
 
 		handler, err := handlers.GetHandler(ctx)

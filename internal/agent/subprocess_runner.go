@@ -137,11 +137,12 @@ func NewSubprocessAgentRunner(logger *zerolog.Logger) (*SubprocessAgentRunner, e
 }
 
 func (s *SubprocessAgentRunner) RunAgent(
-	step internal.Step, 
-	rawOutputPath string, 
-	schemaContent string, 
-	targetDownloadDir string, 
+	step internal.Step,
+	rawOutputPath string,
+	schemaContent string,
+	targetDownloadDir string,
 	logger *zerolog.Logger,
+	apiKey string,
 ) ([]byte, error) {
 	// Create a temporary directory for this specific agent run to place scripts
 	runTempDir, err := os.MkdirTemp(s.agentWorkDir, "agentrun-*")
@@ -215,7 +216,7 @@ func (s *SubprocessAgentRunner) RunAgent(
 
 	cmd := exec.Command(extractedRunScriptPath, cmdArgs...)
 	cmd.Env = append(os.Environ(),
-		"OPENAI_API_KEY="+os.Getenv("OPENAI_API_KEY"),
+		"OPENAI_API_KEY="+apiKey,
 		"DROPSTEP_VENV_PYTHON="+s.venvPythonPath,
 		"DROPSTEP_AGENT_PY_PATH="+filepath.Join(runTempDir, agentassets.MainPyFile),
 	)
@@ -266,4 +267,3 @@ func streamOutputStructured(r io.Reader, wg *sync.WaitGroup, source string, logg
 		logger.Error().Err(err).Str("source", source).Msg("Unexpected error streaming agent output")
 	}
 }
-
