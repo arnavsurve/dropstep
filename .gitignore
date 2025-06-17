@@ -8,4 +8,5 @@ downloads/
 main
 dropstep
 out.json
+examples/out.json
 .dropstep
