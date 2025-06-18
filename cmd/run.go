@@ -30,17 +30,9 @@ func getFallbackKey(providerType string) string {
 }
 
 func (r *RunCmd) Run() error {
-	// Initialize file logger
-	fileSink, err := logging.NewFileSink("out.json")
-	if err != nil {
-		return fmt.Errorf("could not create file log sink: %w", err)
-	}
-
-	// Configure log router
 	router := &logging.LoggerRouter{
 		Sinks: []logging.LogSink{
 			&logging.ConsoleSink{},
-			fileSink,
 		},
 	}
 
@@ -104,6 +96,19 @@ func (r *RunCmd) Run() error {
 
 	// Generate workflow run UUID
 	wfRunID := uuid.New().String()
+
+	// Initialize file logger
+	logsDir := ".dropstep/logs"
+	if err := os.MkdirAll(logsDir, 0755); err != nil {
+		return fmt.Errorf("could not create logs directory %q: %w", logsDir, err)
+	}
+	logFilePath := filepath.Join(logsDir, fmt.Sprintf("%s.json", wfRunID))
+	fileSink, err := logging.NewFileSink(logFilePath)
+	if err != nil {
+		return fmt.Errorf("could not create file log sink: %w", err)
+	}
+
+	router.Sinks = append(router.Sinks, fileSink)
 
 	// Graceful shutdown of logging sinks
 	defer func() {
@@ -172,6 +177,6 @@ func (r *RunCmd) Run() error {
 		}
 	}
 
-	log.Info().Msg("Workflow completed successfully.")
+	log.Info().Msgf("Workflow completed successfully. Logs can be found at %q", logFilePath)
 	return nil
 }
