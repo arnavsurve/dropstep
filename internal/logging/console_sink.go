@@ -5,13 +5,20 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/arnavsurve/dropstep/internal/security"
 	"github.com/fatih/color"
 	"github.com/rs/zerolog"
 )
 
 type ConsoleSink struct{}
 
-func (c *ConsoleSink) Write(level zerolog.Level, event map[string]any) {
+func (c *ConsoleSink) Write(level zerolog.Level, event map[string]any, redactor *security.Redactor) {
+	for key, val := range event {
+		if strVal, ok := val.(string); ok {
+			event[key] = redactor.Redact(strVal)
+		}
+	}
+
 	// Extract fields safely
 	stepId := getString(event, "step_id")
 	msg := getString(event, "message")

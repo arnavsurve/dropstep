@@ -4,6 +4,7 @@ inputs: # Required user inputs
   - name: string
     type: string # string | file | number | boolean
     required: boolean
+    secret: boolean
 
 providers: # Optional configurations for external services like LLM providers
   - name: string # A unique, user-defined name for this provider configuration

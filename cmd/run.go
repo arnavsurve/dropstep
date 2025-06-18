@@ -8,6 +8,7 @@ import (
 	"github.com/arnavsurve/dropstep/internal"
 	"github.com/arnavsurve/dropstep/internal/handlers"
 	"github.com/arnavsurve/dropstep/internal/logging"
+	"github.com/arnavsurve/dropstep/internal/security"
 	"github.com/arnavsurve/dropstep/internal/validation"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -76,6 +77,10 @@ func (r *RunCmd) Run() error {
 	if err := validation.ValidateRequiredInputs(originalWf, varCtx); err != nil {
 		return err
 	}
+
+	// Initialize and attach secrets redactor
+	redactor := security.NewRedactor(originalWf.Inputs, varCtx)
+	router.Redactor = redactor
 
 	resolvedProviders := make(map[string]internal.ProviderConfig)
 	for _, p := range originalWf.Providers {

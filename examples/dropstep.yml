@@ -5,12 +5,11 @@ inputs:
   - name: url
     type: string
     required: false
+    secret: true
   - name: openai_key
     type: string
     required: true
-  - name: asdf
-    type: file
-    required: true
+    secret: true
 
 providers:
   - name: openai

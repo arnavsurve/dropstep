@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/arnavsurve/dropstep/internal/security"
 	"github.com/rs/zerolog"
 )
 
 type FileSink struct {
-	// writer io.Writer
 	file *os.File
 }
 
@@ -20,7 +20,12 @@ func NewFileSink(path string) (*FileSink, error) {
 	return &FileSink{file: f}, nil
 }
 
-func (f *FileSink) Write(level zerolog.Level, event map[string]any) {
+func (f *FileSink) Write(level zerolog.Level, event map[string]any, redactor *security.Redactor) {
+	for key, val := range event {
+		if strVal, ok := val.(string); ok {
+			event[key] = redactor.Redact(strVal)
+		}
+	}
 	data, _ := json.Marshal(event)
 	f.file.Write(append(data, '\n'))
 }
