@@ -26,10 +26,10 @@ steps: # Ordered list of steps
     max_steps: int # (if uses: browser_agent) optional number of max steps an agent can take. Helps control execution times and prevent infinite loops. Default 100
     max_failures: int # (if uses: browser_agent) optional number of max failures an agent can incur. Helps control execution times and prevent infinite loops. Default 3
 
-    run: # (if uses: shell) command line
-      path: string
-      inline: string
-      shell: string
+    run: # (if uses: shell/python)
+      path: string # path to script file
+      inline: string # inline script content
+      interpreter: string # /bin/sh, /bin/bash, ./venv/bin/python3, etc.
 
     call: # (if uses: api)
       method: string # GET, POST, etc.

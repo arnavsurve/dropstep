@@ -98,20 +98,21 @@ func (wf *Workflow) Validate() error {
 
 type Step struct {
 	ID                string         `yaml:"id"`
-	Uses              string         `yaml:"uses"`                      // 'browser_agent' | 'shell' | 'api'
+	Uses              string         `yaml:"uses"`                      // 'browser_agent' | 'shell' | 'http'
 	Provider          string         `yaml:"provider,omitempty"`        // (if uses: browser_agent) The name of the provider to use for this step
 	Prompt            string         `yaml:"prompt,omitempty"`          // if (uses: browser_agent) prompt template
 	Command           *CommandBlock  `yaml:"run,omitempty"`             // (if uses: shell) command line
-	Call              *ApiCall       `yaml:"call,omitempty"`            // (if uses: api)
+	Call              *HTTPCall      `yaml:"call,omitempty"`            // (if uses: http)
 	UploadFiles       []FileToUpload `yaml:"upload_files,omitempty"`    // (if uses: browser_agent) files to upload
 	TargetDownloadDir string         `yaml:"download_dir,omitempty"`    // (if uses: browser_agent) target directory to place downloaded files
 	OutputSchemaFile  string         `yaml:"output_schema,omitempty"`   // (if uses: browser_agent) path to JSON schema to use for LLM structured output
 	AllowedDomains    []string       `yaml:"allowed_domains,omitempty"` // (if uses: browser_agent) list of allowed domains
 	MaxSteps          *int           `yaml:"max_steps,omitempty"`       // (if uses: browser_agent) max number of steps an agent can take
 	MaxFailures       *int           `yaml:"max_failures,omitempty"`    // (if uses: browser_agent) max number of failures an agent can incur
+	Timeout           string         `yaml:"timeout,omitempty"`         // (if uses: http) timeout for the request
 }
 
-type ApiCall struct {
+type HTTPCall struct {
 	Method  string            `yaml:"method"`
 	Url     string            `yaml:"url"`
 	Headers map[string]string `yaml:"headers"`
@@ -126,7 +127,7 @@ type FileToUpload struct {
 type CommandBlock struct {
 	Path        string `yaml:"path"`
 	Inline      string `yaml:"inline"`
-	Interpreter string `yaml:"interpreter"`
+	Interpreter string `yaml:"interpreter,omitempty"`
 }
 
 type ExecutionContext struct {

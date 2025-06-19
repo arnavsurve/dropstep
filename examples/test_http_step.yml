@@ -1,0 +1,44 @@
+name: test-http-step
+description: A workflow to test the HTTP step.
+inputs:
+  - name: userID
+    type: string
+    required: true
+  - name: postTitle
+    type: string
+    required: true
+
+steps:
+  - id: get_user_data
+    uses: http
+    call:
+      method: GET
+      url: "https://jsonplaceholder.typicode.com/users/{{ userID }}"
+      headers:
+        X-Custom-Header: "DropstepE2ETest"
+    timeout: "10s"
+
+  - id: create_post
+    uses: http
+    call:
+      method: POST
+      url: "https://jsonplaceholder.typicode.com/posts"
+      headers:
+        Content-Type: "application/json; charset=UTF-8"
+      body:
+        title: "{{ postTitle }}"
+        body: "This is the body of the post. User was {{ steps.get_user_data.output.body.name }} with email {{ steps.get_user_data.output.body.email }}."
+        userId: "{{ steps.get_user_data.output.body.id }}"
+    timeout: "15s"
+
+  - id: print_post_id
+    uses: shell
+    run:
+      inline: |
+        echo "--- E2E HTTP Test Results ---"
+        echo "GET User Name: {{ steps.get_user_data.output.body.name }}"
+        echo "GET Status Code: {{ steps.get_user_data.output.status_code }}"
+        echo "GET Response Header 'Content-Type': {{ steps.get_user_data.output.headers.Content-Type }}"
+        echo "POST Response - Created Post ID: {{ steps.create_post.output.body.id }}"
+        echo "POST Status Code: {{ steps.create_post.output.status_code }}"
+        echo "-----------------------------"

@@ -63,6 +63,40 @@ func ResolveVarfile(path string) (VarContext, error) {
 	return resolvedCtx, nil
 }
 
+// Helper function to recursively resolve variables in various data structures
+func resolveValue(value any, resolver func(string) (string, error), globals VarContext, results StepResultsContext) (any, error) {
+	switch v := value.(type) {
+	case string:
+		// Use the existing resolver logic from resolveStringWithContext
+		// but we need to adapt it slightly or call it directly.
+		// For simplicity, let's assume `resolver` is already the fine-grained string resolver.
+		return resolver(v)
+	case map[string]any:
+		resolvedMap := make(map[string]any)
+		for key, val := range v {
+			resolvedVal, err := resolveValue(val, resolver, globals, results)
+			if err != nil {
+				return nil, fmt.Errorf("resolving map key %q: %w", key, err)
+			}
+			resolvedMap[key] = resolvedVal
+		}
+		return resolvedMap, nil
+	case []any:
+		resolvedSlice := make([]any, len(v))
+		for i, item := range v {
+			resolvedItem, err := resolveValue(item, resolver, globals, results)
+			if err != nil {
+				return nil, fmt.Errorf("resolving slice item at index %d: %w", i, err)
+			}
+			resolvedSlice[i] = resolvedItem
+		}
+		return resolvedSlice, nil
+	default:
+		// For other types (int, bool, etc.), return as is
+		return v, nil
+	}
+}
+
 // ResolveStepVariables takes a single step and resolves all its templated
 // fields using the global context and the results of previously executed steps.
 func ResolveStepVariables(step *Step, globals VarContext, results StepResultsContext) (*Step, error) {
@@ -81,105 +115,115 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 	// For each file, resolve its path first, then add its `name` as a variable
 	// that resolves to the basename of the path
 	for i, file := range resolvedStep.UploadFiles {
-		resolvedPath, err := resolveStringWithContext(file.Path, globals, results)
+		resolvedPath, err := resolveStringWithContext(file.Path, resolutionCtx, results)
 		if err != nil {
 			return nil, fmt.Errorf("could not resolve path for file variable %q: %w", file.Name, err)
 		}
-		// Update the path on our step-in-progress
 		resolvedStep.UploadFiles[i].Path = resolvedPath
-		// Add the file's `name` to our special resolution context
 		resolutionCtx[file.Name] = filepath.Base(resolvedPath)
 	}
 
 	var err error
-	resolver := func(input string) (string, error) {
+	coreResolver := func(input string) (string, error) {
 		return resolveStringWithContext(input, resolutionCtx, results)
 	}
 
 	// Resolve all string fields in the step
-	resolvedStep.Prompt, err = resolver(resolvedStep.Prompt)
+	resolvedStep.Prompt, err = coreResolver(resolvedStep.Prompt)
 	if err != nil {
-		return nil, fmt.Errorf("could not resolve prompt for step %q: %w", step.ID, err)
+		return nil, fmt.Errorf("resolving prompt for step %q: %w", step.ID, err)
 	}
-	resolvedStep.TargetDownloadDir, err = resolver(resolvedStep.TargetDownloadDir)
+	resolvedStep.TargetDownloadDir, err = coreResolver(resolvedStep.TargetDownloadDir)
 	if err != nil {
-		return nil, fmt.Errorf("could not resolve target download dir for step %q: %w", step.ID, err)
+		return nil, fmt.Errorf("resolving target_download_dir for step %q: %w", step.ID, err)
 	}
-	resolvedStep.OutputSchemaFile, err = resolver(resolvedStep.OutputSchemaFile)
+	resolvedStep.OutputSchemaFile, err = coreResolver(resolvedStep.OutputSchemaFile)
 	if err != nil {
-		return nil, fmt.Errorf("could not resolve output schema file for step %q: %w", step.ID, err)
-	}
-
-	for i := range resolvedStep.UploadFiles {
-		resolvedStep.UploadFiles[i].Path, err = resolver(resolvedStep.UploadFiles[i].Path)
-		if err != nil {
-			return nil, fmt.Errorf("could not resolve path for file variable %q: %w", resolvedStep.UploadFiles[i].Name, err)
-		}
+		return nil, fmt.Errorf("resolving output_schema for step %q: %w", step.ID, err)
 	}
 
 	if resolvedStep.Command != nil {
-		resolvedStep.Command.Path, err = resolver(resolvedStep.Command.Path)
+		resolvedStep.Command.Path, err = coreResolver(resolvedStep.Command.Path)
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve path for run variable %q: %w", resolvedStep.Command.Path, err)
+			return nil, fmt.Errorf("resolving command.path for step %q: %w", step.ID, err)
 		}
-		resolvedStep.Command.Inline, err = resolver(resolvedStep.Command.Inline)
+		resolvedStep.Command.Inline, err = coreResolver(resolvedStep.Command.Inline)
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve inline for run variable %q: %w", resolvedStep.Command.Inline, err)
+			return nil, fmt.Errorf("resolving command.inline for step %q: %w", step.ID, err)
 		}
-		resolvedStep.Command.Interpreter, err = resolver(resolvedStep.Command.Interpreter)
+		resolvedStep.Command.Interpreter, err = coreResolver(resolvedStep.Command.Interpreter)
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve interpreter for run variable %q: %w", resolvedStep.Command.Interpreter, err)
+			return nil, fmt.Errorf("resolving command.interpreter for step %q: %w", step.ID, err)
 		}
 	}
 
 	if resolvedStep.Call != nil {
-		resolvedStep.Call.Url, err = resolver(resolvedStep.Call.Url)
+		resolvedStep.Call.Url, err = coreResolver(resolvedStep.Call.Url)
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve URL for call variable %q: %w", resolvedStep.Call.Url, err)
+			return nil, fmt.Errorf("resolving call.url for step %q: %w", step.ID, err)
 		}
-		for k, v := range resolvedStep.Call.Headers {
-			resolvedStep.Call.Headers[k], err = resolver(v)
-			if err != nil {
-				return nil, fmt.Errorf("could not resolve header %q for call variable %q: %w", k, resolvedStep.Call.Url, err)
-			}
-		}
-		for k, v := range resolvedStep.Call.Body {
-			if strVal, ok := v.(string); ok {
-				resolvedStep.Call.Body[k], err = resolver(strVal)
-				if err != nil {
-					return nil, fmt.Errorf("could not resolve body %q for call variable %q: %w", k, resolvedStep.Call.Url, err)
+
+		if resolvedStep.Call.Headers != nil {
+			resolvedHeaders := make(map[string]string)
+			for k, v := range resolvedStep.Call.Headers {
+				resolvedV, errHeader := coreResolver(v)
+				if errHeader != nil {
+					return nil, fmt.Errorf("resolving call.headers[%s] for step %q: %w", k, step.ID, errHeader)
 				}
+				resolvedHeaders[k] = resolvedV
+			}
+			resolvedStep.Call.Headers = resolvedHeaders
+		}
+
+		if resolvedStep.Call.Body != nil {
+			resolvedBody, errBody := resolveValue(resolvedStep.Call.Body, coreResolver, resolutionCtx, results)
+			if errBody != nil {
+				return nil, fmt.Errorf("resolving call.body for step %q: %w", step.ID, errBody)
+			}
+			if castedBody, ok := resolvedBody.(map[string]any); ok {
+				resolvedStep.Call.Body = castedBody
+			} else if resolvedBody != nil { // if resolvedBody is nil, it means original body was nil.
+				return nil, fmt.Errorf("resolved call.body for step %q is not a map, got %T", step.ID, resolvedBody)
 			}
 		}
 	}
 
 	for i := range resolvedStep.AllowedDomains {
-		resolvedStep.AllowedDomains[i], err = resolver(resolvedStep.AllowedDomains[i])
+		resolvedStep.AllowedDomains[i], err = coreResolver(resolvedStep.AllowedDomains[i])
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve allowed domain %q: %w", resolvedStep.AllowedDomains[i], err)
+			return nil, fmt.Errorf("resolving allowed_domains[%d] for step %q: %w", i, step.ID, err)
 		}
 	}
 
+	// MaxSteps and MaxFailures (if they support templating for some reason, usually they are static)
 	if resolvedStep.MaxSteps != nil {
-		maxStepsString, err := resolver(strconv.Itoa(*resolvedStep.MaxSteps))
+		maxStepsStr, err := coreResolver(strconv.Itoa(*resolvedStep.MaxSteps))
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve max steps %q: %w", *resolvedStep.MaxSteps, err)
+			return nil, fmt.Errorf("resolving max_steps for step %q: %w", step.ID, err)
 		}
-		maxStepsInt, err := strconv.Atoi(maxStepsString)
-		if err != nil {
-			return nil, fmt.Errorf("could not resolve max steps %q: %w", *resolvedStep.MaxSteps, err)
+		maxStepsInt, convErr := strconv.Atoi(maxStepsStr)
+		if convErr != nil {
+			return nil, fmt.Errorf("resolved max_steps for step %q (%s) is not an int: %w", step.ID, maxStepsStr, convErr)
 		}
 		resolvedStep.MaxSteps = &maxStepsInt
 	}
 
-	if resolvedStep.MaxFailures != nil {
-		maxFailuresString, err := resolver(strconv.Itoa(*resolvedStep.MaxFailures))
+	// Resolve step.Timeout string
+	if resolvedStep.Timeout != "" {
+		resolvedStep.Timeout, err = coreResolver(resolvedStep.Timeout)
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve max failures %q: %w", *resolvedStep.MaxFailures, err)
+			return nil, fmt.Errorf("resolving timeout for step %q: %w", step.ID, err)
 		}
-		maxFailuresInt, err := strconv.Atoi(maxFailuresString)
+	}
+
+	if resolvedStep.MaxFailures != nil {
+		maxFailuresStr, err := coreResolver(strconv.Itoa(*resolvedStep.MaxFailures))
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve max failures %q: %w", *resolvedStep.MaxFailures, err)
+			return nil, fmt.Errorf("resolving max_failures for step %q: %w", step.ID, err)
+		}
+		maxFailuresInt, convErr := strconv.Atoi(maxFailuresStr)
+		if convErr != nil {
+			return nil, fmt.Errorf("resolved max_failures for step %q (%s) is not an int: %w", step.ID, maxFailuresStr, convErr)
 		}
 		resolvedStep.MaxFailures = &maxFailuresInt
 	}
@@ -212,13 +256,13 @@ func resolveStringWithContext(input string, globals VarContext, results StepResu
 }
 
 // findValueInContext orchestrates the lookup for a variable.
-func findValueInContext(key string, globals VarContext, results StepResultsContext) (interface{}, bool) {
+func findValueInContext(key string, globals VarContext, results StepResultsContext) (any, bool) {
 	wantsJSON := strings.HasSuffix(key, ".json")
 	if wantsJSON {
 		key = strings.TrimSuffix(key, ".json")
 	}
 
-	var value interface{}
+	var value any
 	var found bool
 
 	// Try to resolve as a `steps` variable
@@ -262,23 +306,30 @@ func findValueInContext(key string, globals VarContext, results StepResultsConte
 }
 
 // getNestedValue traverses a data structure (map or string) using a path slice.
-func getNestedValue(data interface{}, path []string) (interface{}, bool) {
+func getNestedValue(data any, path []string) (any, bool) {
 	if len(path) == 0 {
-		return data, true // Request for the whole object/string
+		return data, true
 	}
 	if data == nil {
 		return nil, false
 	}
 
 	current := data
-	for _, key := range path {
-		m, ok := current.(map[string]interface{})
-		if !ok {
-			return nil, false // Cannot traverse further
-		}
-		if val, exists := m[key]; exists {
-			current = val
-		} else {
+	for _, keyInPath := range path {
+		switch typedCurrent := current.(type) {
+		case map[string]any:
+			if val, exists := typedCurrent[keyInPath]; exists {
+				current = val
+			} else {
+				return nil, false
+			}
+		case map[string]string:
+			if val, exists := typedCurrent[keyInPath]; exists {
+				current = val
+			} else {
+				return nil, false
+			}
+		default:
 			return nil, false
 		}
 	}
