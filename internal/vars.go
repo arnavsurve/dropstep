@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -34,12 +33,10 @@ func ResolveVarfile(path string) (VarContext, error) {
 	}
 
 	envRe := regexp.MustCompile(`^\s*\{\{\s*env\.([A-Za-z0-9_]+)\s*}}\s*$`)
-	shellRe := regexp.MustCompile(`^\s*\{\{\s*shell\((?:"|'` + "`" + `)(.+?)(?:"|'` + "`" + `)\)\s*\}\}\s*$`)
 
 	resolvedCtx := make(VarContext, len(rawVars))
 	for key, val := range rawVars {
-		switch {
-		case envRe.MatchString(val):
+		if envRe.MatchString(val) {
 			match := envRe.FindStringSubmatch(val)
 			envKey := match[1]
 			envVal, exists := os.LookupEnv(envKey)
@@ -47,16 +44,7 @@ func ResolveVarfile(path string) (VarContext, error) {
 				log.Printf("warning: environment variable %q not found for varfile key %q", envKey, key)
 			}
 			resolvedCtx[key] = envVal
-		case shellRe.MatchString(val):
-			match := shellRe.FindStringSubmatch(val)
-			cmdStr := match[1]
-			// #nosec G204 -- User is explicitly asking for a shell command to be run.
-			output, execErr := exec.Command("sh", "-c", cmdStr).Output()
-			if execErr != nil {
-				return nil, fmt.Errorf("running shell command for varfile key %q (%s): %w", key, cmdStr, execErr)
-			}
-			resolvedCtx[key] = strings.TrimSpace(string(output))
-		default:
+		} else {
 			resolvedCtx[key] = val
 		}
 	}
