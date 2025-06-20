@@ -1,6 +1,7 @@
 package internal_test
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/arnavsurve/dropstep/internal"
@@ -32,7 +33,13 @@ func TestLoadBrokenWorkflowFixture(t *testing.T) {
 	wf, err := internal.LoadWorkflowFromFile(file)
 	require.NoError(t, err)
 
-	err = validation.ValidateWorkflowHandlers(wf)
+	workflowAbsPath, err := filepath.Abs(file)
+	if err != nil {
+		t.Errorf("could not determine absolute path for workflow file: %v", err)
+	}
+	workflowDir := filepath.Dir(workflowAbsPath)
+
+	err = validation.ValidateWorkflowHandlers(wf, workflowDir)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "must define 'prompt'")
 }

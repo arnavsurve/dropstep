@@ -1,6 +1,7 @@
 package security
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/arnavsurve/dropstep/internal"
@@ -28,7 +29,19 @@ func (r *Redactor) Redact(s string) string {
 	if r == nil || len(r.secrets) == 0 {
 		return s
 	}
-	for _, secret := range r.secrets {
+	
+	// Sort secrets by length in descending order to handle overlapping secrets properly
+	// This ensures longer secrets are replaced before their substrings
+	secrets := make([]string, len(r.secrets))
+	copy(secrets, r.secrets)
+	sort.Slice(secrets, func(i, j int) bool {
+		return len(secrets[i]) > len(secrets[j])
+	})
+	
+	for _, secret := range secrets {
+		if secret == "" {
+			continue
+		}
 		s = strings.ReplaceAll(s, secret, "********")
 	}
 	return s
