@@ -23,7 +23,6 @@ func (r *LoggerRouter) Log(level zerolog.Level, event map[string]any) {
 	}
 }
 
-// Close enables graceful shutdown of loggers by iterating through all sinks and calling their Close() method.
 func (r *LoggerRouter) Close() error {
 	var firstErr error
 	for _, sink := range r.Sinks {
