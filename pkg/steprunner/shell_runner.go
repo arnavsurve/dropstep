@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/arnavsurve/dropstep/internal"
+	"github.com/arnavsurve/dropstep/pkg/fileutil"
 	"github.com/arnavsurve/dropstep/pkg/types"
 )
 
@@ -73,7 +73,7 @@ func (sr *ShellRunner) Run() (*types.StepResult, error) {
 
 	isInline := step.Command.Inline != ""
 	if !isInline {
-		resolvedPath, err := internal.ResolvePathFromWorkflow(workflowDir, step.Command.Path)
+		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, step.Command.Path)
 		if err != nil {
 			return nil, fmt.Errorf("error resolving script path: %w", err)
 		}
