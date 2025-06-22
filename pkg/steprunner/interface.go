@@ -1,8 +1,8 @@
 package steprunner
 
-import "github.com/arnavsurve/dropstep/pkg/core"
+import "github.com/arnavsurve/dropstep/pkg/types"
 
 type StepRunner interface {
 	Validate() error
-	Run() (*core.StepResult, error)
+	Run() (*types.StepResult, error)
 }

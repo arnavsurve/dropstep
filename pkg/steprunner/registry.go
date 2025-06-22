@@ -3,10 +3,10 @@ package steprunner
 import (
 	"fmt"
 
-	"github.com/arnavsurve/dropstep/pkg/core"
+	"github.com/arnavsurve/dropstep/pkg/types"
 )
 
-type RunnerFactory func(ctx core.ExecutionContext) (StepRunner, error)
+type RunnerFactory func(ctx types.ExecutionContext) (StepRunner, error)
 
 // registry stores each type of step runner's factory function. GetRunner calls the appropriate StepRunner
 // factory function to yield a new instance of that StepRunner
@@ -21,7 +21,7 @@ func RegisterRunnerFactory(stepType string, factory RunnerFactory) {
 
 // GetRunner returns an instance of the appropriate StepRunner based on the step's 'uses' field,
 // calling the corresponding runner's factory function from the registry.
-func GetRunner(ctx core.ExecutionContext) (StepRunner, error) {
+func GetRunner(ctx types.ExecutionContext) (StepRunner, error) {
 	stepType := ctx.Step.Uses
 	factory, ok := registry[stepType]
 	if !ok {

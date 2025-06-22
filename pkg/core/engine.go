@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/arnavsurve/dropstep/pkg/steprunner"
+	"github.com/arnavsurve/dropstep/pkg/types"
 )
 
 type WorkflowEngine struct {
@@ -39,7 +40,7 @@ func (e *WorkflowEngine) ExecuteWorkflow(
 
 		scopedLogger := e.Logger.With().Str("step_id", resolvedStep.ID).Str("step_type", resolvedStep.Uses).Logger()
 
-		execCtx := ExecutionContext{
+		execCtx := types.ExecutionContext{
 			Step:        *resolvedStep,
 			Logger:      scopedLogger,
 			WorkflowDir: workflowDir,

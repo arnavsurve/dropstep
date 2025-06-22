@@ -1,12 +1,8 @@
 package core
 
-// StepResult is the standardized output structure returned by every handler's Run method.
-type StepResult struct {
-	Output     any    `json:"output"`
-	OutputFile string `json:"output_file,omitempty"`
-}
+import "github.com/arnavsurve/dropstep/pkg/types"
 
-type StepResultsContext = map[string]StepResult
+type StepResultsContext = map[string]types.StepResult
 
 type ProviderConfig struct {
 	Name   string `yaml:"name"`
@@ -29,55 +25,25 @@ type Workflow struct {
 	Steps       []Step           `yaml:"steps"`
 }
 
-type Step struct {
-	ID                string         `yaml:"id"`
-	Uses              string         `yaml:"uses"`                      // 'browser_agent' | 'shell' | 'http'
-	Provider          string         `yaml:"provider,omitempty"`        // (if uses: browser_agent) The name of the provider to use for this step
-	Prompt            string         `yaml:"prompt,omitempty"`          // if (uses: browser_agent) prompt template
-	Command           *CommandBlock  `yaml:"run,omitempty"`             // (if uses: shell) command line
-	Call              *HTTPCall      `yaml:"call,omitempty"`            // (if uses: http)
-	UploadFiles       []FileToUpload `yaml:"upload_files,omitempty"`    // (if uses: browser_agent) files to upload
-	TargetDownloadDir string         `yaml:"download_dir,omitempty"`    // (if uses: browser_agent) target directory to place downloaded files
-	OutputSchemaFile  string         `yaml:"output_schema,omitempty"`   // (if uses: browser_agent) path to JSON schema to use for LLM structured output
-	AllowedDomains    []string       `yaml:"allowed_domains,omitempty"` // (if uses: browser_agent) list of allowed domains
-	MaxSteps          *int           `yaml:"max_steps,omitempty"`       // (if uses: browser_agent) max number of steps an agent can take
-	MaxFailures       *int           `yaml:"max_failures,omitempty"`    // (if uses: browser_agent) max number of failures an agent can incur
-	Timeout           string         `yaml:"timeout,omitempty"`         // (if uses: http) timeout for the request
-}
+type Step = types.Step
 
-type HTTPCall struct {
-	Method  string            `yaml:"method"`
-	Url     string            `yaml:"url"`
-	Headers map[string]string `yaml:"headers"`
-	Body    map[string]any    `yaml:"body"`
-}
+type HTTPCall = types.HTTPCall
 
-type FileToUpload struct {
-	Name string `yaml:"name"`
-	Path string `yaml:"path"`
-}
+type FileToUpload = types.FileToUpload
 
-type CommandBlock struct {
-	Path        string `yaml:"path"`
-	Inline      string `yaml:"inline"`
-	Interpreter string `yaml:"interpreter,omitempty"`
-}
+type CommandBlock = types.CommandBlock
 
-type ExecutionContext struct {
-	Step        Step
-	Logger      Logger
-	WorkflowDir string
-	APIKey      string
-}
+type ExecutionContext = types.ExecutionContext
 
-type Level int8
+type Level = types.Level
 
+// Level constants
 const (
-	DebugLevel Level = iota
-	InfoLevel
-	WarnLevel
-	ErrorLevel
-	FatalLevel
+	DebugLevel = types.DebugLevel
+	InfoLevel  = types.InfoLevel
+	WarnLevel  = types.WarnLevel
+	ErrorLevel = types.ErrorLevel
+	FatalLevel = types.FatalLevel
 )
 
 type Field struct {

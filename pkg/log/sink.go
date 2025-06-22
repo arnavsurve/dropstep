@@ -7,14 +7,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/arnavsurve/dropstep/pkg/core"
 	"github.com/arnavsurve/dropstep/pkg/security"
+	"github.com/arnavsurve/dropstep/pkg/types"
 	"github.com/rs/zerolog"
 )
 
 // LogEvent represents a log event that will be written to sinks
 type LogEvent struct {
-	Level     core.Level
+	Level     types.Level
 	Message   string
 	Fields    map[string]any
 	RawError  error
@@ -40,7 +40,7 @@ func NewRouter(sinks ...Sink) *Router {
 func (r *Router) Write(p []byte) (n int, err error) {
 	var zerologOutput map[string]any
 	if err := json.Unmarshal(p, &zerologOutput); err != nil {
-		fmt.Fprint(os.Stderr, "Router: Error unmarshaling log line: %v, data: %s\n", err, string(p))
+		fmt.Fprintf(os.Stderr, "Router: Error unmarshaling log line: %v, data: %s\n", err, string(p))
 		return len(p), nil
 	}
 
@@ -113,20 +113,20 @@ func (r *Router) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func ConvertZerologLevel(zl zerolog.Level) core.Level {
+func ConvertZerologLevel(zl zerolog.Level) types.Level {
 	switch zl {
 	case zerolog.DebugLevel:
-		return core.DebugLevel
+		return types.DebugLevel
 	case zerolog.InfoLevel:
-		return core.InfoLevel
+		return types.InfoLevel
 	case zerolog.WarnLevel:
-		return core.WarnLevel
+		return types.WarnLevel
 	case zerolog.ErrorLevel:
-		return core.ErrorLevel
+		return types.ErrorLevel
 	case zerolog.FatalLevel:
-		return core.FatalLevel
+		return types.FatalLevel
 	default:
-		return core.InfoLevel
+		return types.InfoLevel
 	}
 }
 

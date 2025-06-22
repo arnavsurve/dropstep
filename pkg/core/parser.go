@@ -18,7 +18,7 @@ func LoadWorkflowFromFile(path string) (*Workflow, error) {
 		return nil, fmt.Errorf("error parsing workflow YAML: %w", err)
 	}
 
-	if err := wf.Validate(); err != nil {
+	if err := ValidateWorkflowStructure(&wf); err != nil {
 		return nil, fmt.Errorf("invalid workflow: %w", err)
 	}
 

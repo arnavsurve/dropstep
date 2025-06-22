@@ -8,15 +8,16 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/arnavsurve/dropstep/pkg/core"
+	"github.com/arnavsurve/dropstep/internal"
+	"github.com/arnavsurve/dropstep/pkg/types"
 )
 
 type ShellRunner struct {
-	StepCtx core.ExecutionContext
+	StepCtx types.ExecutionContext
 }
 
 func init() {
-	RegisterRunnerFactory("shell", func(ctx core.ExecutionContext) (StepRunner, error) {
+	RegisterRunnerFactory("shell", func(ctx types.ExecutionContext) (StepRunner, error) {
 		return &ShellRunner{
 			StepCtx: ctx,
 		}, nil
@@ -65,14 +66,14 @@ func (sr *ShellRunner) Validate() error {
 	return nil
 }
 
-func (sr *ShellRunner) Run() (*core.StepResult, error) {
+func (sr *ShellRunner) Run() (*types.StepResult, error) {
 	step := sr.StepCtx.Step
 	logger := sr.StepCtx.Logger
 	workflowDir := sr.StepCtx.WorkflowDir
 
 	isInline := step.Command.Inline != ""
 	if !isInline {
-		resolvedPath, err := core.ResolvePathFromWorkflow(workflowDir, step.Command.Path)
+		resolvedPath, err := internal.ResolvePathFromWorkflow(workflowDir, step.Command.Path)
 		if err != nil {
 			return nil, fmt.Errorf("error resolving script path: %w", err)
 		}
@@ -123,11 +124,11 @@ func (sr *ShellRunner) Run() (*core.StepResult, error) {
 
 	if err := json.Unmarshal([]byte(stdout), &structuredOutput); err == nil {
 		logger.Debug().Msg("Shell output was valid JSON, promoting to structured output.")
-		return &core.StepResult{Output: structuredOutput}, nil
+		return &types.StepResult{Output: structuredOutput}, nil
 	}
 
 	logger.Debug().Msg("Shell output was not JSON, treating as raw string output.")
-	return &core.StepResult{Output: stdout}, nil
+	return &types.StepResult{Output: stdout}, nil
 }
 
 func (sr *ShellRunner) getInlineCommand(interpreter string) *exec.Cmd {
