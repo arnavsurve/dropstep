@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/arnavsurve/dropstep/pkg/steprunner/browseragent/assets"
+	"github.com/arnavsurve/dropstep/pkg/steprunner/runners/browseragent/assets"
 	"github.com/arnavsurve/dropstep/pkg/types"
 )
 

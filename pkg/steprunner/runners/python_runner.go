@@ -1,4 +1,4 @@
-package handlers
+package runners
 
 import (
 	"bytes"
@@ -8,24 +8,25 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/arnavsurve/dropstep/internal"
+	"github.com/arnavsurve/dropstep/pkg/fileutil"
+	"github.com/arnavsurve/dropstep/pkg/steprunner"
+	"github.com/arnavsurve/dropstep/pkg/types"
 )
 
-type PythonHandler struct {
-	StepCtx internal.ExecutionContext
+type PythonRunner struct {
+	StepCtx types.ExecutionContext
 }
 
 func init() {
-	RegisterHandlerFactory("python", func(ctx internal.ExecutionContext) (Handler, error) {
-		handler := &PythonHandler{
+	steprunner.RegisterRunnerFactory("python", func(ctx types.ExecutionContext) (steprunner.StepRunner, error) {
+		return &PythonRunner{
 			StepCtx: ctx,
-		}
-		return handler, nil
+		}, nil
 	})
 }
 
-func (ph *PythonHandler) Validate() error {
-	step := ph.StepCtx.Step
+func (pr *PythonRunner) Validate() error {
+	step := pr.StepCtx.Step
 
 	if step.Prompt != "" {
 		return fmt.Errorf("python step %q must not define 'prompt'", step.ID)
@@ -85,14 +86,14 @@ func (ph *PythonHandler) Validate() error {
 	return nil
 }
 
-func (ph *PythonHandler) Run() (*internal.StepResult, error) {
-	step := ph.StepCtx.Step
-	logger := ph.StepCtx.Logger
-	workflowDir := ph.StepCtx.WorkflowDir
+func (pr *PythonRunner) Run() (*types.StepResult, error) {
+	step := pr.StepCtx.Step
+	logger := pr.StepCtx.Logger
+	workflowDir := pr.StepCtx.WorkflowDir
 
 	isInline := step.Command.Inline != ""
 	if !isInline {
-		resolvedPath, err := internal.ResolvePathFromWorkflow(workflowDir, step.Command.Path)
+		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, step.Command.Path)
 		if err != nil {
 			return nil, fmt.Errorf("error resolving script path: %w", err)
 		}
@@ -109,9 +110,9 @@ func (ph *PythonHandler) Run() (*internal.StepResult, error) {
 
 	var cmd *exec.Cmd
 	if isInline {
-		cmd = ph.getInlineCommand(interpreter)
+		cmd = pr.getInlineCommand(interpreter)
 	} else {
-		cmd = ph.getFileCommand(interpreter)
+		cmd = pr.getFileCommand(interpreter)
 	}
 
 	var stdoutBuf, stderrBuf bytes.Buffer
@@ -126,8 +127,8 @@ func (ph *PythonHandler) Run() (*internal.StepResult, error) {
 
 	waitErr := cmd.Wait()
 
-	logBuffer(strings.NewReader(stderrBuf.String()), "STDERR", logger, "python_line")
-	logBuffer(strings.NewReader(stdoutBuf.String()), "STDOUT", logger, "python_line")
+	steprunner.LogBuffer(strings.NewReader(stderrBuf.String()), "STDERR", logger, "python_line")
+	steprunner.LogBuffer(strings.NewReader(stdoutBuf.String()), "STDOUT", logger, "python_line")
 
 	if waitErr != nil {
 		if exitErr, ok := waitErr.(*exec.ExitError); ok {
@@ -143,14 +144,14 @@ func (ph *PythonHandler) Run() (*internal.StepResult, error) {
 
 	if err := json.Unmarshal([]byte(stdout), &structuredOutput); err == nil {
 		logger.Debug().Msg("Python output was valid JSON, promoting to structured output.")
-		return &internal.StepResult{Output: structuredOutput}, nil
+		return &types.StepResult{Output: structuredOutput}, nil
 	}
 
 	logger.Debug().Msg("Python output was not JSON, treating as raw string output.")
-	return &internal.StepResult{Output: stdout}, nil
+	return &types.StepResult{Output: stdout}, nil
 }
 
-func (ph *PythonHandler) getInlineCommand(interpreter string) *exec.Cmd {
+func (ph *PythonRunner) getInlineCommand(interpreter string) *exec.Cmd {
 	inlineScript := ph.StepCtx.Step.Command.Inline
 	if len(inlineScript) > 1000 {
 		ph.StepCtx.Logger.Warn().Msg("Long script in 'inline' - consider passing a script file as 'path' for maintainability.")
@@ -160,8 +161,8 @@ func (ph *PythonHandler) getInlineCommand(interpreter string) *exec.Cmd {
 	return shellCmd
 }
 
-func (ph *PythonHandler) getFileCommand(interpreter string) *exec.Cmd {
-	scriptPath := ph.StepCtx.Step.Command.Path
+func (pr *PythonRunner) getFileCommand(interpreter string) *exec.Cmd {
+	scriptPath := pr.StepCtx.Step.Command.Path
 	// #nosec G204
 	shellCmd := exec.Command(interpreter, scriptPath)
 	return shellCmd

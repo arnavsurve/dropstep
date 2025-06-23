@@ -1,4 +1,4 @@
-package steprunner
+package runners
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arnavsurve/dropstep/pkg/steprunner"
 	"github.com/arnavsurve/dropstep/pkg/types"
 )
 
@@ -21,7 +22,7 @@ type HttpRunner struct {
 }
 
 func init() {
-	RegisterRunnerFactory("http", func(ctx types.ExecutionContext) (StepRunner, error) {
+	steprunner.RegisterRunnerFactory("http", func(ctx types.ExecutionContext) (steprunner.StepRunner, error) {
 		return &HttpRunner{
 			StepCtx: ctx,
 		}, nil

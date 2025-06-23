@@ -5,14 +5,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/arnavsurve/dropstep/internal"
-	"github.com/arnavsurve/dropstep/internal/handlers"
-	"github.com/arnavsurve/dropstep/internal/logging"
-	"github.com/arnavsurve/dropstep/internal/security"
-	"github.com/arnavsurve/dropstep/internal/validation"
+	"github.com/arnavsurve/dropstep/pkg/core"
+	"github.com/arnavsurve/dropstep/pkg/log"
+	"github.com/arnavsurve/dropstep/pkg/log/sinks"
+	"github.com/arnavsurve/dropstep/pkg/security"
+	"github.com/arnavsurve/dropstep/pkg/steprunner"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 )
 
 type RunCmd struct {
@@ -30,53 +30,88 @@ func getFallbackKey(providerType string) string {
 }
 
 func (r *RunCmd) Run() error {
-	router := &logging.LoggerRouter{
-		Sinks: []logging.LogSink{
-			&logging.ConsoleSink{},
-		},
+	wfRunID := uuid.New().String()
+
+	consoleSink := sinks.NewConsoleSink()
+
+	logsDir := ".dropstep/logs"
+	if err := os.MkdirAll(logsDir, 0755); err != nil {
+		return fmt.Errorf("could not create logs directory %q: %w", logsDir, err)
+	}
+	logFilePath := filepath.Join(logsDir, fmt.Sprintf("%s.json", wfRunID))
+	fileSink, err := sinks.NewFileSink(logFilePath)
+	if err != nil {
+		return fmt.Errorf("could not create file log sink: %w", err)
 	}
 
-	// Configure base logger with placeholder values before loading workflow values
-	logging.ConfigureGlobalLogger(router, "pre-init", "pre-init")
-	log.Logger = logging.GlobalLogger
+	logRouter := log.NewRouter()
+	logRouter.AddSink(consoleSink)
+	logRouter.AddSink(fileSink)
+
+	routerWriter := logRouter
+	baseZerologInstance := zerolog.New(routerWriter).With().Timestamp().Logger()
+	cmdLogger := log.NewZerologAdapter(baseZerologInstance)
+
+	// Graceful shutdown of logging sinks
+	defer func() {
+		cmdLogger.Info().Msg("Shutting down logger...")
+		if err := logRouter.Close(); err != nil {
+			fmt.Printf("Error during log shutdown: %v", err)
+		}
+	}()
 
 	// Load .env
 	if err := godotenv.Load(); err != nil {
-		log.Warn().Err(err).Msg("No .env file found, relying on real ENV")
+		cmdLogger.Warn().Err(err).Msgf("No .env file found or error thrown while loading it. Relying on existing ENV if vars use {{ env.* }}")
 	}
 
 	// Load original workflow YAML
-	originalWf, err := internal.LoadWorkflowFromFile(r.Workflow)
+	wf, err := core.LoadWorkflowFromFile(r.Workflow)
 	if err != nil {
-		return fmt.Errorf("could not load workflow file: %w", err)
+		cmdLogger.Error().Err(err).Msgf("Failed to load workflow file %s", r.Workflow)
+		return fmt.Errorf("could not load workflow file %q: %w", r.Workflow, err)
 	}
+	cmdLogger.Info().Msgf("Successfully loaded workflow: %s", wf.Name)
 
 	// Get the workflow directory
 	workflowAbsPath, err := filepath.Abs(r.Workflow)
 	if err != nil {
-		return fmt.Errorf("could not determine absolute path for workflow file: %w", err)
+		cmdLogger.Error().Err(err).Msgf("Could not determine absolute path for workflow file %s", r.Workflow)
+		return fmt.Errorf("could not determine absolute path for workflow file %q: %w", r.Workflow, err)
 	}
 	workflowDir := filepath.Dir(workflowAbsPath)
 
 	// Load varfile YAML
-	varCtx, err := internal.ResolveVarfile(r.Varfile)
-	if err != nil {
-		log.Warn().Err(err).Msg("Could not resolve varfile, proceeding without global variables")
-		varCtx = make(internal.VarContext)
+	var varCtx core.VarContext
+	if _, statErr := os.Stat(r.Varfile); os.IsNotExist(statErr) {
+		cmdLogger.Warn().Msgf("Varfile %s not found. Proceeding without global variables. Required inputs might fail validation if not in ENV.", r.Varfile)
+		varCtx = make(core.VarContext)
+	} else {
+		varCtx, err = core.ResolveVarfile(r.Varfile)
+		if err != nil {
+			cmdLogger.Warn().Err(err).Msgf("Could not fully resolve varfile %q. Some variable validations might be affected.", r.Varfile)
+			if varCtx == nil {
+				varCtx = make(core.VarContext)
+			}
+		} else {
+			cmdLogger.Info().Msgf("Successfully loaded and resolved varfile: %s", r.Varfile)
+		}
 	}
 
-	// Validate required inputs
-	if err := validation.ValidateRequiredInputs(originalWf, varCtx); err != nil {
+	// Validate required input variables
+	if err := core.ValidateRequiredInputs(wf, varCtx); err != nil {
+		cmdLogger.Error().Err(err).Msgf("Required input validation failed")
 		return err
 	}
+	cmdLogger.Info().Msgf("Required input validation passed")
 
 	// Initialize and attach secrets redactor
-	redactor := security.NewRedactor(originalWf.Inputs, varCtx)
-	router.Redactor = redactor
+	logRouter.Redactor = security.NewRedactor(wf.Inputs, varCtx)
 
-	resolvedProviders := make(map[string]internal.ProviderConfig)
-	for _, p := range originalWf.Providers {
-		resolvedP, err := internal.ResolveProviderVariables(&p, varCtx)
+	// Resolve workflow providers
+	resolvedProviders := make(map[string]core.ProviderConfig)
+	for _, p := range wf.Providers {
+		resolvedP, err := core.ResolveProviderVariables(&p, varCtx)
 		if err != nil {
 			return fmt.Errorf("could not resolve variables for provider %q: %w", p.Name, err)
 		}
@@ -84,62 +119,44 @@ func (r *RunCmd) Run() error {
 	}
 
 	// Create a temporary, resolved copy of the workflow for validation
-	validationWf, err := internal.InjectVarsIntoWorkflow(originalWf, varCtx)
+	validationWf, err := core.InjectVarsIntoWorkflow(wf, varCtx)
 	if err != nil {
 		return fmt.Errorf("could not resolve global variables for workflow validation: %w", err)
 	}
 
-	// Validate the handlers using the temporary workflow
-	if err := validation.ValidateWorkflowHandlers(validationWf, workflowDir); err != nil {
-		return fmt.Errorf("error validating workflow steps: %w", err)
+	// Validate structure at the workflow level
+	if err := core.ValidateWorkflowStructure(validationWf); err != nil {
+		return fmt.Errorf("workflow structure validation failed: %w", err)
 	}
 
-	// Generate workflow run UUID
-	wfRunID := uuid.New().String()
-
-	// Initialize file logger
-	logsDir := ".dropstep/logs"
-	if err := os.MkdirAll(logsDir, 0755); err != nil {
-		return fmt.Errorf("could not create logs directory %q: %w", logsDir, err)
-	}
-	logFilePath := filepath.Join(logsDir, fmt.Sprintf("%s.json", wfRunID))
-	fileSink, err := logging.NewFileSink(logFilePath)
-	if err != nil {
-		return fmt.Errorf("could not create file log sink: %w", err)
+	// Validate runners using the temporary workflow
+	if err := core.ValidateWorkflowRunners(validationWf, workflowDir); err != nil {
+		return fmt.Errorf("workflow runner validation failed: %w", err)
 	}
 
-	router.Sinks = append(router.Sinks, fileSink)
+	cmdLogger.Info().Msg("Workflow validation passed")
 
-	// Graceful shutdown of logging sinks
-	defer func() {
-		fmt.Println("Shutting down logger...")
-		if err := router.Close(); err != nil {
-			fmt.Printf("Error during log shutdown: %v", err)
-		}
-	}()
+	cmdLogger.Info().Msgf("Starting workflow: %q (run ID: %s)", wf.Name, wfRunID)
 
-	// Update the global logger values
-	logging.ConfigureGlobalLogger(router, originalWf.Name, wfRunID)
-	log.Logger = logging.GlobalLogger
+	stepResults := make(core.StepResultsContext)
+	for _, step := range wf.Steps {
+		cmdLogger.Info().Msgf("Running step %q (uses=%s)", step.ID, step.Uses)
 
-	log.Info().Msg("Initialized workflow logger")
-	log.Info().Msgf("Starting workflow: %q (run ID: %s)", originalWf.Name, wfRunID)
-
-	stepResults := make(internal.StepResultsContext)
-
-	// Run handlers using the original workflow object
-	for _, step := range originalWf.Steps {
-		log.Info().Msgf("Running step %q (uses=%s)", step.ID, step.Uses)
-
-		resolvedStep, err := internal.ResolveStepVariables(&step, varCtx, stepResults)
+		resolvedStep, err := core.ResolveStepVariables(&step, varCtx, stepResults)
 		if err != nil {
 			return fmt.Errorf("could not resolve variables for step %q: %w", step.ID, err)
 		}
 
-		scopedLogger := logging.ScopedLogger(resolvedStep.ID, resolvedStep.Uses)
-		ctx := internal.ExecutionContext{
-			Step:        *resolvedStep,
-			Logger:      &scopedLogger,
+		scopedLogger := cmdLogger.With().
+			Str("step_id", resolvedStep.ID).
+			Str("step_uses", resolvedStep.Uses).
+			Logger()
+
+		scopedLogger.Info().Msgf("Running step %q (uses=%s)...", resolvedStep.ID, resolvedStep.Uses)
+
+		ctx := core.ExecutionContext{
+			Step: *resolvedStep,
+			Logger: scopedLogger,
 			WorkflowDir: workflowDir,
 		}
 
@@ -161,22 +178,22 @@ func (r *RunCmd) Run() error {
 			ctx.APIKey = finalAPIKey
 		}
 
-		handler, err := handlers.GetHandler(ctx)
+		runner, err := steprunner.GetRunner(ctx)
 		if err != nil {
-			return fmt.Errorf("error getting handler for step %q: %w", resolvedStep.ID, err)
+			return fmt.Errorf("error getting runner for step %q: %w", resolvedStep.ID, err)
 		}
 
-		result, err := handler.Run()
+		result, err := runner.Run()
 		if err != nil {
 			return fmt.Errorf("error running step %q: %w", resolvedStep.ID, err)
 		}
 
 		if result != nil {
-			log.Debug().Interface("result", result).Msgf("Storing result for step %q", resolvedStep.ID)
+			cmdLogger.Debug().Msgf("Storing result for step %q: %+v", resolvedStep.ID, result)
 			stepResults[resolvedStep.ID] = *result
 		}
 	}
 
-	log.Info().Msgf("Workflow completed successfully. Logs can be found at %q", logFilePath)
+	cmdLogger.Info().Msgf("Workflow completed successfully. Logs can be found at %q", logFilePath)
 	return nil
 }

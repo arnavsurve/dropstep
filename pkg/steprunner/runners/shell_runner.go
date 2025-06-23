@@ -1,4 +1,4 @@
-package steprunner
+package runners
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/arnavsurve/dropstep/pkg/fileutil"
+	"github.com/arnavsurve/dropstep/pkg/steprunner"
 	"github.com/arnavsurve/dropstep/pkg/types"
 )
 
@@ -17,7 +18,7 @@ type ShellRunner struct {
 }
 
 func init() {
-	RegisterRunnerFactory("shell", func(ctx types.ExecutionContext) (StepRunner, error) {
+	steprunner.RegisterRunnerFactory("shell", func(ctx types.ExecutionContext) (steprunner.StepRunner, error) {
 		return &ShellRunner{
 			StepCtx: ctx,
 		}, nil
@@ -107,8 +108,8 @@ func (sr *ShellRunner) Run() (*types.StepResult, error) {
 
 	waitErr := cmd.Wait()
 
-	logBuffer(strings.NewReader(stderrBuf.String()), "STDERR", logger, "shell_line")
-	logBuffer(strings.NewReader(stdoutBuf.String()), "STDOUT", logger, "shell_line")
+	steprunner.LogBuffer(strings.NewReader(stderrBuf.String()), "STDERR", logger, "shell_line")
+	steprunner.LogBuffer(strings.NewReader(stdoutBuf.String()), "STDOUT", logger, "shell_line")
 
 	if waitErr != nil {
 		if exitErr, ok := waitErr.(*exec.ExitError); ok {

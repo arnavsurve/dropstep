@@ -1,6 +1,11 @@
 package core
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/arnavsurve/dropstep/pkg/steprunner"
+	"github.com/arnavsurve/dropstep/pkg/types"
+)
 
 // Validate checks fields at the workflow level, validating workflow name, input types/uniqueness, and step uniqueness.
 func ValidateWorkflowStructure(wf *Workflow) error {
@@ -71,5 +76,25 @@ func ValidateRequiredInputs(wf *Workflow, varCtx VarContext) error {
 			}
 		}
 	}
+	return nil
+}
+
+func ValidateWorkflowRunners(wf *Workflow, workflowDir string) error {
+	for _, step := range wf.Steps {
+		ctx := types.ExecutionContext{
+			Step:        step,
+			WorkflowDir: workflowDir,
+		}
+
+		runner, err := steprunner.GetRunner(ctx)
+		if err != nil {
+			return fmt.Errorf("error getting runner for step %q: %w", step.ID, err)
+		}
+
+		if err = runner.Validate(); err != nil {
+			return fmt.Errorf("error validating step %q: %w", step.ID, err)
+		}
+	}
+
 	return nil
 }

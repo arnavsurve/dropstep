@@ -17,7 +17,6 @@ type LogEvent struct {
 	Level     types.Level
 	Message   string
 	Fields    map[string]any
-	RawError  error
 	Timestamp time.Time
 }
 
@@ -30,7 +29,7 @@ type Sink interface {
 // Router routes log events to multiple sinks
 type Router struct {
 	sinks    []Sink
-	redactor *security.Redactor
+	Redactor *security.Redactor
 }
 
 func NewRouter(sinks ...Sink) *Router {
@@ -62,15 +61,11 @@ func (r *Router) Write(p []byte) (n int, err error) {
 	} else {
 		evt.Timestamp = time.Now()
 	}
-	if errField, ok := zerologOutput[zerolog.ErrorFieldName].(string); ok {
-		evt.Fields[zerolog.ErrorFieldName] = errField
-	}
 
 	reservedFields := map[string]struct{}{
 		zerolog.LevelFieldName:     {},
 		zerolog.MessageFieldName:   {},
 		zerolog.TimestampFieldName: {},
-		zerolog.ErrorFieldName:     {},
 	}
 	for k, v := range zerologOutput {
 		if _, isReserved := reservedFields[k]; !isReserved {
@@ -78,25 +73,25 @@ func (r *Router) Write(p []byte) (n int, err error) {
 		}
 	}
 
-	if r.redactor != nil {
-		evt.Message = r.redactor.Redact(evt.Message)
+	if r.Redactor != nil {
+		evt.Message = r.Redactor.Redact(evt.Message)
 		for k, v := range evt.Fields {
 			if strVal, ok := v.(string); ok {
-				evt.Fields[k] = r.redactor.Redact(strVal)
+				evt.Fields[k] = r.Redactor.Redact(strVal)
 			}
 		}
 		for _, v := range evt.Fields {
 			if m, ok := v.(map[string]any); ok {
 				for kk, vv := range m {
 					if strVal, ok := vv.(string); ok {
-						m[kk] = r.redactor.Redact(strVal)
+						m[kk] = r.Redactor.Redact(strVal)
 					}
 				}
 			}
 			if s, ok := v.([]any); ok {
 				for i, vv := range s {
 					if strVal, ok := vv.(string); ok {
-						s[i] = r.redactor.Redact(strVal)
+						s[i] = r.Redactor.Redact(strVal)
 					}
 				}
 			}

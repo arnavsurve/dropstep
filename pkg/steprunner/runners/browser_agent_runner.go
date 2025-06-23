@@ -1,4 +1,4 @@
-package steprunner
+package runners
 
 import (
 	"encoding/json"
@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/arnavsurve/dropstep/pkg/fileutil"
-	"github.com/arnavsurve/dropstep/pkg/steprunner/browseragent"
+	"github.com/arnavsurve/dropstep/pkg/steprunner"
+	"github.com/arnavsurve/dropstep/pkg/steprunner/runners/browseragent"
 	"github.com/arnavsurve/dropstep/pkg/types"
 )
 
@@ -17,7 +18,7 @@ type BrowserAgentRunner struct {
 }
 
 func init() {
-	RegisterRunnerFactory("browser_agent", func(ctx types.ExecutionContext) (StepRunner, error) {
+	steprunner.RegisterRunnerFactory("browser_agent", func(ctx types.ExecutionContext) (steprunner.StepRunner, error) {
 		agentRunner, err := browseragent.NewSubprocessAgentRunner(ctx.Logger)
 		if err != nil {
 			return nil, err
