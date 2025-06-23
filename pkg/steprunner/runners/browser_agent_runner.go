@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 
 	"github.com/arnavsurve/dropstep/pkg/fileutil"
+	"github.com/arnavsurve/dropstep/pkg/log"
 	"github.com/arnavsurve/dropstep/pkg/steprunner"
 	"github.com/arnavsurve/dropstep/pkg/steprunner/runners/browseragent"
 	"github.com/arnavsurve/dropstep/pkg/types"
+	"github.com/rs/zerolog"
 )
 
 type BrowserAgentRunner struct {
@@ -19,7 +21,15 @@ type BrowserAgentRunner struct {
 
 func init() {
 	steprunner.RegisterRunnerFactory("browser_agent", func(ctx types.ExecutionContext) (steprunner.StepRunner, error) {
-		agentRunner, err := browseragent.NewSubprocessAgentRunner(ctx.Logger)
+		// Create a null logger if ctx.Logger is nil to prevent crashes during validation
+		logger := ctx.Logger
+		if logger == nil {
+			// Create a no-op logger that discards all output
+			nullLogger := log.NewZerologAdapter(zerolog.New(zerolog.Nop()))
+			logger = nullLogger
+		}
+
+		agentRunner, err := browseragent.NewSubprocessAgentRunner(logger)
 		if err != nil {
 			return nil, err
 		}

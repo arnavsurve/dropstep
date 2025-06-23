@@ -12,6 +12,9 @@ import (
 	"github.com/arnavsurve/dropstep/pkg/types"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
+
+	// Ensure all runner implementations are initialized
+	_ "github.com/arnavsurve/dropstep/pkg/steprunner/runners"
 )
 
 type LintCmd struct {

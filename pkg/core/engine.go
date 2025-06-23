@@ -69,7 +69,7 @@ func (e *WorkflowEngine) ExecuteWorkflow(
 		}
 
 		if result != nil {
-			e.Logger.Debug().Msgf("Storing result for step %q: %+v", resolvedStep.ID, result)
+			e.Logger.Debug().Msgf("Storing result for step %q", resolvedStep.ID)
 			stepResults[resolvedStep.ID] = *result
 		}
 	}

@@ -13,6 +13,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
+
+	// Ensure all runner implementations are initialized
+	_ "github.com/arnavsurve/dropstep/pkg/steprunner/runners"
 )
 
 type RunCmd struct {
@@ -184,7 +187,7 @@ func (r *RunCmd) Run() error {
 		}
 
 		if result != nil {
-			cmdLogger.Debug().Msgf("Storing result for step %q: %+v", resolvedStep.ID, result)
+			cmdLogger.Debug().Msgf("Storing result for step %q", resolvedStep.ID)
 			stepResults[resolvedStep.ID] = *result
 		}
 	}
