@@ -4,13 +4,13 @@ import (
 	"os"
 
 	"github.com/alecthomas/kong"
-	"github.com/arnavsurve/dropstep/cmd"
+	"github.com/arnavsurve/dropstep/cmd/cli"
 	"github.com/rs/zerolog/log"
 )
 
 var CLI struct {
-	Run cmd.RunCmd `cmd:"" help:"Run a Dropstep workflow."`
-	Lint cmd.LintCmd `cmd:"" help:"Validate the Dropstep workflow file syntax."`
+	Run  cli.RunCmd  `cmd:"" help:"Run a Dropstep workflow."`
+	Lint cli.LintCmd `cmd:"" help:"Validate the Dropstep workflow file syntax."`
 }
 
 func main() {
