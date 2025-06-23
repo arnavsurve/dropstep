@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"fmt"
@@ -9,7 +9,6 @@ import (
 	"github.com/arnavsurve/dropstep/pkg/log"
 	"github.com/arnavsurve/dropstep/pkg/log/sinks"
 	"github.com/arnavsurve/dropstep/pkg/security"
-	"github.com/arnavsurve/dropstep/pkg/steprunner"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
@@ -121,6 +120,21 @@ func (r *RunCmd) Run() error {
 		resolvedProviders[p.Name] = *resolvedP
 	}
 
+	// Apply fallback API keys for providers with empty API keys
+	for name, provider := range resolvedProviders {
+		if provider.APIKey == "" {
+			cmdLogger.Info().Msgf("API key for provider %q is not defined in the workflow. Falling back to environment variable.", provider.Name)
+			fallbackKey := getFallbackKey(provider.Type)
+			if fallbackKey != "" {
+				provider.APIKey = fallbackKey
+				resolvedProviders[name] = provider
+			} else {
+				cmdLogger.Error().Msgf("API key for provider %q is not defined in the workflow or the expected environment variable", provider.Name)
+				return fmt.Errorf("API key for provider %q is not defined in the workflow or the expected environment variable", provider.Name)
+			}
+		}
+	}
+
 	// Create a temporary, resolved copy of the workflow for validation
 	validationWf, err := core.InjectVarsIntoWorkflow(wf, varCtx)
 	if err != nil {
@@ -136,60 +150,11 @@ func (r *RunCmd) Run() error {
 
 	cmdLogger.Info().Msgf("Starting workflow: %q (run ID: %s)", wf.Name, wfRunID)
 
-	stepResults := make(core.StepResultsContext)
-	for _, step := range wf.Steps {
-		cmdLogger.Info().Msgf("Running step %q (uses=%s)", step.ID, step.Uses)
-
-		resolvedStep, err := core.ResolveStepVariables(&step, varCtx, stepResults)
-		if err != nil {
-			return fmt.Errorf("could not resolve variables for step %q: %w", step.ID, err)
-		}
-
-		scopedLogger := cmdLogger.With().
-			Str("step_id", resolvedStep.ID).
-			Str("step_uses", resolvedStep.Uses).
-			Logger()
-
-		scopedLogger.Info().Msgf("Running step %q (uses=%s)...", resolvedStep.ID, resolvedStep.Uses)
-
-		ctx := core.ExecutionContext{
-			Step:        *resolvedStep,
-			Logger:      scopedLogger,
-			WorkflowDir: workflowDir,
-		}
-
-		if resolvedStep.Uses == "browser_agent" {
-			providerConf, found := resolvedProviders[resolvedStep.Provider]
-			if !found {
-				return fmt.Errorf("step %q references provider %q, which is not defined in the 'providers' block", resolvedStep.ID, resolvedStep.Provider)
-			}
-
-			finalAPIKey := providerConf.APIKey
-			if finalAPIKey == "" {
-				finalAPIKey = getFallbackKey(providerConf.Type)
-			}
-
-			if finalAPIKey == "" {
-				return fmt.Errorf("API key for provider %q is not defined in the workflow or the expected environment variable", resolvedStep.Provider)
-			}
-
-			ctx.APIKey = finalAPIKey
-		}
-
-		runner, err := steprunner.GetRunner(ctx)
-		if err != nil {
-			return fmt.Errorf("error getting runner for step %q: %w", resolvedStep.ID, err)
-		}
-
-		result, err := runner.Run()
-		if err != nil {
-			return fmt.Errorf("error running step %q: %w", resolvedStep.ID, err)
-		}
-
-		if result != nil {
-			cmdLogger.Debug().Msgf("Storing result for step %q", resolvedStep.ID)
-			stepResults[resolvedStep.ID] = *result
-		}
+	// Create and use the workflow engine
+	engine := core.NewWorkflowEngine(cmdLogger)
+	_, err = engine.ExecuteWorkflow(wf, varCtx, nil, workflowDir, resolvedProviders)
+	if err != nil {
+		return err
 	}
 
 	cmdLogger.Info().Msgf("Workflow completed successfully. Logs can be found at %q", logFilePath)
