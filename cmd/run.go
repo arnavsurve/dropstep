@@ -124,11 +124,6 @@ func (r *RunCmd) Run() error {
 		return fmt.Errorf("could not resolve global variables for workflow validation: %w", err)
 	}
 
-	// Validate structure at the workflow level
-	if err := core.ValidateWorkflowStructure(validationWf); err != nil {
-		return fmt.Errorf("workflow structure validation failed: %w", err)
-	}
-
 	// Validate runners using the temporary workflow
 	if err := core.ValidateWorkflowRunners(validationWf, workflowDir); err != nil {
 		return fmt.Errorf("workflow runner validation failed: %w", err)
@@ -155,8 +150,8 @@ func (r *RunCmd) Run() error {
 		scopedLogger.Info().Msgf("Running step %q (uses=%s)...", resolvedStep.ID, resolvedStep.Uses)
 
 		ctx := core.ExecutionContext{
-			Step: *resolvedStep,
-			Logger: scopedLogger,
+			Step:        *resolvedStep,
+			Logger:      scopedLogger,
 			WorkflowDir: workflowDir,
 		}
 

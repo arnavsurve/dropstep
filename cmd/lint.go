@@ -83,12 +83,6 @@ func (l *LintCmd) Run() error {
 		return fmt.Errorf("could not resolve global variables for workflow: %w", err)
 	}
 
-	// Validate structure at the workflow level
-	if err := core.ValidateWorkflowStructure(validationWf); err != nil {
-		return fmt.Errorf("workflow structure validation failed: %w", err)
-	}
-
-
 	cmdLogger.Info().Msgf("Starting validation of individual steps...")
 	for _, stepConfig := range validationWf.Steps {
 		stepLogger := cmdLogger.With().

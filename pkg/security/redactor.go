@@ -8,7 +8,7 @@ import (
 )
 
 type Redactor struct {
-	secrets []string
+	Secrets []string
 }
 
 func NewRedactor(inputs []core.Input, varCtx core.VarContext) *Redactor {
@@ -21,19 +21,19 @@ func NewRedactor(inputs []core.Input, varCtx core.VarContext) *Redactor {
 		}
 	}
 	return &Redactor{
-		secrets: secretValues,
+		Secrets: secretValues,
 	}
 }
 
 func (r *Redactor) Redact(s string) string {
-	if r == nil || len(r.secrets) == 0 {
+	if r == nil || len(r.Secrets) == 0 {
 		return s
 	}
 
 	// Sort secrets by length in descending order to handle overlapping secrets properly
 	// This ensures longer secrets are replaced before their substrings
-	secrets := make([]string, len(r.secrets))
-	copy(secrets, r.secrets)
+	secrets := make([]string, len(r.Secrets))
+	copy(secrets, r.Secrets)
 	sort.Slice(secrets, func(i, j int) bool {
 		return len(secrets[i]) > len(secrets[j])
 	})

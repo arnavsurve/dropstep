@@ -52,17 +52,14 @@ func ResolveVarfile(path string) (VarContext, error) {
 }
 
 // Helper function to recursively resolve variables in various data structures
-func resolveValue(value any, resolver func(string) (string, error), globals VarContext, results StepResultsContext) (any, error) {
+func ResolveValue(value any, resolver func(string) (string, error), globals VarContext, results StepResultsContext) (any, error) {
 	switch v := value.(type) {
 	case string:
-		// Use the existing resolver logic from resolveStringWithContext
-		// but we need to adapt it slightly or call it directly.
-		// For simplicity, let's assume `resolver` is already the fine-grained string resolver.
 		return resolver(v)
 	case map[string]any:
 		resolvedMap := make(map[string]any)
 		for key, val := range v {
-			resolvedVal, err := resolveValue(val, resolver, globals, results)
+			resolvedVal, err := ResolveValue(val, resolver, globals, results)
 			if err != nil {
 				return nil, fmt.Errorf("resolving map key %q: %w", key, err)
 			}
@@ -72,7 +69,7 @@ func resolveValue(value any, resolver func(string) (string, error), globals VarC
 	case []any:
 		resolvedSlice := make([]any, len(v))
 		for i, item := range v {
-			resolvedItem, err := resolveValue(item, resolver, globals, results)
+			resolvedItem, err := ResolveValue(item, resolver, globals, results)
 			if err != nil {
 				return nil, fmt.Errorf("resolving slice item at index %d: %w", i, err)
 			}
@@ -103,7 +100,7 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 	// For each file, resolve its path first, then add its `name` as a variable
 	// that resolves to the basename of the path
 	for i, file := range resolvedStep.UploadFiles {
-		resolvedPath, err := resolveStringWithContext(file.Path, resolutionCtx, results)
+		resolvedPath, err := ResolveStringWithContext(file.Path, resolutionCtx, results)
 		if err != nil {
 			return nil, fmt.Errorf("could not resolve path for file variable %q: %w", file.Name, err)
 		}
@@ -113,7 +110,7 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 
 	var err error
 	coreResolver := func(input string) (string, error) {
-		return resolveStringWithContext(input, resolutionCtx, results)
+		return ResolveStringWithContext(input, resolutionCtx, results)
 	}
 
 	// Resolve all string fields in the step
@@ -164,7 +161,7 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 		}
 
 		if resolvedStep.Call.Body != nil {
-			resolvedBody, errBody := resolveValue(resolvedStep.Call.Body, coreResolver, resolutionCtx, results)
+			resolvedBody, errBody := ResolveValue(resolvedStep.Call.Body, coreResolver, resolutionCtx, results)
 			if errBody != nil {
 				return nil, fmt.Errorf("resolving call.body for step %q: %w", step.ID, errBody)
 			}
@@ -219,8 +216,8 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 	return &resolvedStep, nil
 }
 
-// resolveStringWithContext is the core template resolution engine.
-func resolveStringWithContext(input string, globals VarContext, results StepResultsContext) (string, error) {
+// ResolveStringWithContext is the core template resolution engine.
+func ResolveStringWithContext(input string, globals VarContext, results StepResultsContext) (string, error) {
 	var firstErr error
 	output := varRegex.ReplaceAllStringFunc(input, func(match string) string {
 		if firstErr != nil {
@@ -228,7 +225,7 @@ func resolveStringWithContext(input string, globals VarContext, results StepResu
 		}
 
 		key := varRegex.FindStringSubmatch(match)[1]
-		val, found := findValueInContext(key, globals, results)
+		val, found := FindValueInContext(key, globals, results)
 
 		if !found {
 			firstErr = fmt.Errorf("undefined variable: %s", key)
@@ -243,8 +240,8 @@ func resolveStringWithContext(input string, globals VarContext, results StepResu
 	return output, nil
 }
 
-// findValueInContext orchestrates the lookup for a variable.
-func findValueInContext(key string, globals VarContext, results StepResultsContext) (any, bool) {
+// FindValueInContext orchestrates the lookup for a variable.
+func FindValueInContext(key string, globals VarContext, results StepResultsContext) (any, bool) {
 	wantsJSON := strings.HasSuffix(key, ".json")
 	if wantsJSON {
 		key = strings.TrimSuffix(key, ".json")
@@ -265,7 +262,7 @@ func findValueInContext(key string, globals VarContext, results StepResultsConte
 		if result, ok := results[stepID]; ok {
 			switch field {
 			case "output":
-				value, found = getNestedValue(result.Output, parts[3:])
+				value, found = GetNestedValue(result.Output, parts[3:])
 			case "output_file":
 				if len(parts) == 3 {
 					value, found = result.OutputFile, true
@@ -293,8 +290,8 @@ func findValueInContext(key string, globals VarContext, results StepResultsConte
 	return value, true
 }
 
-// getNestedValue traverses a data structure (map or string) using a path slice.
-func getNestedValue(data any, path []string) (any, bool) {
+// GetNestedValue traverses a data structure (map or string) using a path slice.
+func GetNestedValue(data any, path []string) (any, bool) {
 	if len(path) == 0 {
 		return data, true
 	}
@@ -381,7 +378,7 @@ func ResolveProviderVariables(p *ProviderConfig, globals VarContext) (*ProviderC
 		return nil, fmt.Errorf("failed to deep copy provider for resolution: %w", err)
 	}
 
-	resolvedKey, err := resolveStringWithContext(resolvedProvider.APIKey, globals, nil)
+	resolvedKey, err := ResolveStringWithContext(resolvedProvider.APIKey, globals, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve 'api_key' for provider %q: %w", p.Name, err)
 	}
