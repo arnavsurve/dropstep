@@ -96,7 +96,7 @@ func (hr *HttpRunner) Run() (*types.StepResult, error) {
 	if callDetails.Body != nil && (method == "POST" || method == "PUT" || method == "PATCH") {
 		jsonBody, err := json.Marshal(callDetails.Body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal request body to JSON for step %q: %w", step.ID, err)
+			return nil, fmt.Errorf("marshaling request body to JSON: %w", err)
 		}
 		reqBody = bytes.NewBuffer(jsonBody)
 		reqBodyBytes = jsonBody
@@ -118,7 +118,7 @@ func (hr *HttpRunner) Run() (*types.StepResult, error) {
 
 	req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request for step %q: %w", step.ID, err)
+		return nil, fmt.Errorf("creating HTTP request: %w", err)
 	}
 
 	// Set headers
@@ -154,14 +154,14 @@ func (hr *HttpRunner) Run() (*types.StepResult, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP request failed for step %q: %w", step.ID, err)
+		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Read response body
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body for step %q: %w", step.ID, err)
+		return nil, fmt.Errorf("reading response body: %w", err)
 	}
 
 	logger.Info().

@@ -13,8 +13,9 @@ type ProviderConfig struct {
 type Input struct {
 	Name     string `yaml:"name"`
 	Type     string `yaml:"type"`
-	Required bool   `yaml:"required"`
-	Secret   bool   `yaml:"secret"`
+	Required bool   `yaml:"required,omitempty"`
+	Secret   bool   `yaml:"secret,omitempty"`
+	Default  string `yaml:"default,omitempty"`
 }
 
 type Workflow struct {

@@ -34,28 +34,24 @@ func (l *LintCmd) Run() error {
 
 	cmdLogger.Info().Msgf("Validating %s using %s", l.Workflow, l.Varfile)
 
-	// Load .env
 	if err := godotenv.Load(); err != nil {
 		cmdLogger.Warn().Err(err).Msgf("No .env file found or error thrown while loading it. Relying on existing ENV if vars use {{ env.* }}")
 	}
 
-	// Load original workflow YAML
 	wf, err := core.LoadWorkflowFromFile(l.Workflow)
 	if err != nil {
 		cmdLogger.Error().Err(err).Msgf("Failed to load workflow file %s", l.Workflow)
-		return fmt.Errorf("could not load workflow file %q: %w", l.Workflow, err)
+		return fmt.Errorf("loading workflow file %q: %w", l.Workflow, err)
 	}
 	cmdLogger.Info().Msgf("Successfully loaded workflow: %s", wf.Name)
 
-	// Get the workflow directory
 	workflowAbsPath, err := filepath.Abs(l.Workflow)
 	if err != nil {
 		cmdLogger.Error().Err(err).Msgf("Could not determine absolute path for workflow file %s", l.Workflow)
-		return fmt.Errorf("could not determine absolute path for workflow file %q: %w", l.Workflow, err)
+		return fmt.Errorf("determining absolute path for workflow file %q: %w", l.Workflow, err)
 	}
 	workflowDir := filepath.Dir(workflowAbsPath)
 
-	// Load varfile YAML
 	var varCtx core.VarContext
 	if _, statErr := os.Stat(l.Varfile); os.IsNotExist(statErr) {
 		cmdLogger.Warn().Msgf("Varfile %s not found. Proceeding without global variables. Required inputs might fail validation if not in ENV.", l.Varfile)
@@ -72,21 +68,19 @@ func (l *LintCmd) Run() error {
 		}
 	}
 
-	// Validate required input variables
 	if err := core.ValidateRequiredInputs(wf, varCtx); err != nil {
 		cmdLogger.Error().Err(err).Msgf("Required input validation failed")
-		return err
+		return fmt.Errorf("validating required inputs: %w", err)
 	}
 	cmdLogger.Info().Msgf("Required input validation passed")
 
-	// Create a temporary, resolved copy of the workflow for validation
 	validationWf, err := core.InjectVarsIntoWorkflow(wf, varCtx)
 	if err != nil {
 		cmdLogger.Error().Err(err).Msg("Could not resolve global variables for workflow validation")
-		return fmt.Errorf("could not resolve global variables for workflow: %w", err)
+		return fmt.Errorf("resolving global variables for workflow: %w", err)
 	}
 
-	cmdLogger.Info().Msgf("Starting validation of individual steps...")
+	cmdLogger.Info().Msgf("Validating individual steps...")
 	for _, stepConfig := range validationWf.Steps {
 		stepLogger := cmdLogger.With().
 			Str("step_id", stepConfig.ID).
@@ -104,15 +98,15 @@ func (l *LintCmd) Run() error {
 		runner, err := steprunner.GetRunner(execCtx)
 		if err != nil {
 			stepLogger.Error().Err(err).Msg("Error getting runner for step")
-			return fmt.Errorf("error getting runner for step %q: %w", stepConfig.ID, err)
+			return fmt.Errorf("getting runner for step %q: %w", stepConfig.ID, err)
 		}
 
 		if err := runner.Validate(); err != nil {
 			stepLogger.Error().Err(err).Msg("Step configuration validation failed")
-			return fmt.Errorf("validation failed for step %q (uses: %s): %w", stepConfig.ID, stepConfig.Uses, err)
+			return fmt.Errorf("validating step %q (uses: %s): %w", stepConfig.ID, stepConfig.Uses, err)
 		}
 
-		stepLogger.Info().Msgf("Step configuration validation passed")
+		stepLogger.Info().Msg("Step configuration validation passed")
 	}
 
 	cmdLogger.Info().Msg("Successfully validated workflow configuration ✅")

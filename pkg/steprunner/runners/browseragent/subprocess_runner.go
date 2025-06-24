@@ -33,7 +33,7 @@ func ensurePythonVenv(baseCacheDir string, logger types.Logger) (string, string,
 	// Get embedded requirements.txt content
 	reqBytes, err := assets.GetAgentScriptContent(assets.RequirementsFile)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to get embedded requirements.txt: %w", err)
+		return "", "", fmt.Errorf("getting requirements.txt: %w", err)
 	}
 	currentReqHash := fmt.Sprintf("%x", sha256.Sum256(reqBytes))
 
@@ -58,7 +58,7 @@ func ensurePythonVenv(baseCacheDir string, logger types.Logger) (string, string,
 
 	if recreateVenv {
 		if err := os.MkdirAll(venvPath, 0755); err != nil {
-			return "", "", fmt.Errorf("failed to create directory for venv %s: %w", venvPath, err)
+			return "", "", fmt.Errorf("creating venv directory %s: %w", venvPath, err)
 		}
 
 		// Create venv
@@ -68,7 +68,7 @@ func ensurePythonVenv(baseCacheDir string, logger types.Logger) (string, string,
 		cmdVenv.Stderr = &stderrVenv
 		logger.Debug().Str("command", cmdVenv.String()).Msg("Executing subprocess call")
 		if err := cmdVenv.Run(); err != nil {
-			return "", "", fmt.Errorf("failed to create python venv (python3 -m venv %s): %w. Stderr: %s", venvPath, err, stderrVenv.String())
+			return "", "", fmt.Errorf("creating python venv (python3 -m venv %s): %w. Stderr: %s", venvPath, err, stderrVenv.String())
 		}
 		logger.Info().Msg("Python venv created successfully")
 
@@ -76,13 +76,13 @@ func ensurePythonVenv(baseCacheDir string, logger types.Logger) (string, string,
 		// Need to write requirements.txt to a temporary location for pip to read
 		tempReqFile, err := os.CreateTemp(baseCacheDir, "requirements-*.txt")
 		if err != nil {
-			return "", "", fmt.Errorf("failed to create temporary requirements.txt: %w", err)
+			return "", "", fmt.Errorf("creating temporary requirements.txt: %w", err)
 		}
 		defer os.Remove(tempReqFile.Name()) // Clean up temp file
 
 		if _, err := tempReqFile.Write(reqBytes); err != nil {
 			tempReqFile.Close()
-			return "", "", fmt.Errorf("failed to write to temporary requirements.txt: %w", err)
+			return "", "", fmt.Errorf("writing to temporary requirements.txt: %w", err)
 		}
 		tempReqFile.Close() // Close before pip uses it
 
@@ -91,7 +91,7 @@ func ensurePythonVenv(baseCacheDir string, logger types.Logger) (string, string,
 		cmdPip.Stderr = &stderrPip
 		logger.Debug().Str("command", cmdPip.String()).Msg("Executing subprocess call")
 		if err := cmdPip.Run(); err != nil {
-			return "", "", fmt.Errorf("failed to install requirements (pip install -r %s): %w. Stderr: %s", tempReqFile.Name(), err, stderrPip.String())
+			return "", "", fmt.Errorf("installing requirements (pip install -r %s): %w. Stderr: %s", tempReqFile.Name(), err, stderrPip.String())
 		}
 		logger.Info().Msg("Python requirements installed successfully")
 
@@ -120,12 +120,12 @@ func NewSubprocessAgentRunner(logger types.Logger) (*SubprocessAgentRunner, erro
 	}
 	appCacheDir := filepath.Join(userCacheDir, "dropstep")
 	if err := os.MkdirAll(appCacheDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create app cache directory %s: %w", appCacheDir, err)
+		return nil, fmt.Errorf("creating app cache directory %s: %w", appCacheDir, err)
 	}
 
 	venvBasePath, venvPython, err := ensurePythonVenv(appCacheDir, logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to ensure python venv: %w", err)
+		return nil, fmt.Errorf("ensuring python venv: %w", err)
 	}
 	_ = venvBasePath
 
@@ -146,7 +146,7 @@ func (s *SubprocessAgentRunner) RunAgent(
 	// Create a temporary directory for this specific agent run to place scripts
 	runTempDir, err := os.MkdirTemp(s.agentWorkDir, "agentrun-*")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create temporary run directory: %w", err)
+		return nil, fmt.Errorf("creating temporary run directory: %w", err)
 	}
 	defer func() {
 		if err := os.RemoveAll(runTempDir); err != nil {
@@ -167,11 +167,11 @@ func (s *SubprocessAgentRunner) RunAgent(
 	for _, scriptName := range scriptsToExtract {
 		content, err := assets.GetAgentScriptContent(scriptName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get embedded script %s: %w", scriptName, err)
+			return nil, fmt.Errorf("getting embedded script %s: %w", scriptName, err)
 		}
 		destPath := filepath.Join(runTempDir, scriptName)
 		if err := os.WriteFile(destPath, content, 0755); err != nil {
-			return nil, fmt.Errorf("failed to write embedded script %s to %s: %w", scriptName, destPath, err)
+			return nil, fmt.Errorf("writing embedded script %s to %s: %w", scriptName, destPath, err)
 		}
 	}
 
@@ -179,7 +179,7 @@ func (s *SubprocessAgentRunner) RunAgent(
 
 	outputPath, err := filepath.Abs(rawOutputPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get absolute path for output file %s: %v", rawOutputPath, err)
+		return nil, fmt.Errorf("getting absolute path for output file %s: %w", rawOutputPath, err)
 	}
 	logger.Debug().Str("path", outputPath).Msg("Resolved path for agent output")
 
@@ -189,7 +189,7 @@ func (s *SubprocessAgentRunner) RunAgent(
 		for _, f := range step.UploadFiles {
 			absPath, err := filepath.Abs(f.Path)
 			if err != nil {
-				return nil, fmt.Errorf("failed to get abs path for upload %s: %w", f.Path, err)
+				return nil, fmt.Errorf("getting abs path for upload %s: %w", f.Path, err)
 			}
 			cmdArgs = append(cmdArgs, absPath)
 		}
@@ -223,15 +223,15 @@ func (s *SubprocessAgentRunner) RunAgent(
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("error creating stdout pipe: %w", err)
+		return nil, fmt.Errorf("creating stdout pipe: %w", err)
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return nil, fmt.Errorf("error creating stderr pipe: %w", err)
+		return nil, fmt.Errorf("creating stderr pipe: %w", err)
 	}
 
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("failed to start agent script %s: %w", extractedRunScriptPath, err)
+		return nil, fmt.Errorf("starting agent script %s: %w", extractedRunScriptPath, err)
 	}
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -246,7 +246,7 @@ func (s *SubprocessAgentRunner) RunAgent(
 	}
 	jsonData, readFileErr := os.ReadFile(outputPath)
 	if readFileErr != nil {
-		return nil, fmt.Errorf("failed to read agent output file %s: %w", outputPath, readFileErr)
+		return nil, fmt.Errorf("reading agent output file %s: %w", outputPath, readFileErr)
 	}
 	return jsonData, nil
 }

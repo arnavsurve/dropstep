@@ -35,7 +35,7 @@ func (e *WorkflowEngine) ExecuteWorkflow(
 
 		resolvedStep, err := ResolveStepVariables(&step, varCtx, stepResults)
 		if err != nil {
-			return stepResults, fmt.Errorf("could not resolve variables for step %q: %w", step.ID, err)
+			return stepResults, fmt.Errorf("resolving variables for step %q: %w", step.ID, err)
 		}
 
 		scopedLogger := e.Logger.With().Str("step_id", resolvedStep.ID).Str("step_type", resolvedStep.Uses).Logger()
@@ -60,12 +60,12 @@ func (e *WorkflowEngine) ExecuteWorkflow(
 
 		runner, err := steprunner.GetRunner(execCtx)
 		if err != nil {
-			return stepResults, fmt.Errorf("error getting runner for step %q: %w", resolvedStep.ID, err)
+			return stepResults, fmt.Errorf("getting runner for step %q: %w", resolvedStep.ID, err)
 		}
 
 		result, err := runner.Run()
 		if err != nil {
-			return stepResults, fmt.Errorf("error running step %q: %w", resolvedStep.ID, err)
+			return stepResults, fmt.Errorf("running step %q: %w", resolvedStep.ID, err)
 		}
 
 		if result != nil {

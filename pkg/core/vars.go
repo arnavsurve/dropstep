@@ -89,7 +89,7 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 	var resolvedStep Step
 	b, _ := yaml.Marshal(step)
 	if err := yaml.Unmarshal(b, &resolvedStep); err != nil {
-		return nil, fmt.Errorf("failed to deep copy step for resolution: %w", err)
+		return nil, fmt.Errorf("deep copying step for resolution: %w", err)
 	}
 
 	resolutionCtx := make(VarContext)
@@ -102,7 +102,7 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 	for i, file := range resolvedStep.UploadFiles {
 		resolvedPath, err := ResolveStringWithContext(file.Path, resolutionCtx, results)
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve path for file variable %q: %w", file.Name, err)
+			return nil, fmt.Errorf("resolving path for file variable %q: %w", file.Name, err)
 		}
 		resolvedStep.UploadFiles[i].Path = resolvedPath
 		resolutionCtx[file.Name] = filepath.Base(resolvedPath)
@@ -324,7 +324,7 @@ func GetNestedValue(data any, path []string) (any, bool) {
 // InjectVarsIntoWorkflow is kept for the linter, but it only resolves global variables.
 func InjectVarsIntoWorkflow(wf *Workflow, globalVarCtx VarContext) (*Workflow, error) {
 	if wf == nil {
-		return nil, fmt.Errorf("cannot inject vars into nil workflow")
+		return nil, fmt.Errorf("injecting vars into nil workflow")
 	}
 
 	// Create a deep copy
@@ -375,12 +375,12 @@ func ResolveProviderVariables(p *ProviderConfig, globals VarContext) (*ProviderC
 	var resolvedProvider ProviderConfig
 	b, _ := yaml.Marshal(p)
 	if err := yaml.Unmarshal(b, &resolvedProvider); err != nil {
-		return nil, fmt.Errorf("failed to deep copy provider for resolution: %w", err)
+		return nil, fmt.Errorf("deep copying provider for resolution: %w", err)
 	}
 
 	resolvedKey, err := ResolveStringWithContext(resolvedProvider.APIKey, globals, nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not resolve 'api_key' for provider %q: %w", p.Name, err)
+		return nil, fmt.Errorf("resolving 'api_key' for provider %q: %w", p.Name, err)
 	}
 	resolvedProvider.APIKey = resolvedKey
 

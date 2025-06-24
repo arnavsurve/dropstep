@@ -71,7 +71,7 @@ func (bar *BrowserAgentRunner) Validate() error {
 		// Validate file exists
 		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, f.Path)
 		if err != nil {
-			return fmt.Errorf("step %q: failed to resolve path for upload_files[%d] %q: %w", step.ID, i, f.Path, err)
+			return fmt.Errorf("step %q: resolving upload_files[%d] path %q: %w", step.ID, i, f.Path, err)
 		}
 		if _, err := os.Stat(resolvedPath); err != nil {
 			return fmt.Errorf("step %q: upload_files[%d] file not found at path %q: %w", step.ID, i, resolvedPath, err)
@@ -81,7 +81,7 @@ func (bar *BrowserAgentRunner) Validate() error {
 	if step.OutputSchemaFile != "" {
 		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, step.OutputSchemaFile)
 		if err != nil {
-			return fmt.Errorf("step %q: could not resolve output_schema path: %w", step.ID, err)
+			return fmt.Errorf("step %q: resolving output_schema path %q: %w", step.ID, step.OutputSchemaFile, err)
 		}
 		if _, err := os.Stat(resolvedPath); err != nil {
 			return fmt.Errorf("step %q: output_schema file not found at path %q", step.ID, resolvedPath)
@@ -91,13 +91,13 @@ func (bar *BrowserAgentRunner) Validate() error {
 	if step.TargetDownloadDir != "" {
 		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, step.TargetDownloadDir)
 		if err != nil {
-			return fmt.Errorf("step %q: could not resolve download_dir path: %w", step.ID, err)
+			return fmt.Errorf("step %q: resolving download_dir path %q: %w", step.ID, step.TargetDownloadDir, err)
 		}
 		if _, err := os.Stat(resolvedPath); err != nil {
 			if os.IsNotExist(err) {
 				logger.Warn().Str("path", resolvedPath).Msg("Download directory does not exist yet, will attempt to create at runtime")
 			} else {
-				return fmt.Errorf("step %q: error checking download_dir path %q: %w", step.ID, resolvedPath, err)
+				return fmt.Errorf("step %q: checking download_dir path %q: %w", step.ID, resolvedPath, err)
 			}
 		}
 	}
@@ -143,11 +143,11 @@ func (bar *BrowserAgentRunner) Run() (*types.StepResult, error) {
 	if step.TargetDownloadDir != "" {
 		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, step.TargetDownloadDir)
 		if err != nil {
-			return nil, fmt.Errorf("step %q: failed to resolve target_download_dir %q: %w", step.ID, step.TargetDownloadDir, err)
+			return nil, fmt.Errorf("step %q: resolving target_download_dir %q: %w", step.ID, step.TargetDownloadDir, err)
 		}
 		finalTargetDownloadDir = resolvedPath
 		if err := os.MkdirAll(finalTargetDownloadDir, 0755); err != nil {
-			return nil, fmt.Errorf("step %q: failed to create target download directory %q: %w", step.ID, finalTargetDownloadDir, err)
+			return nil, fmt.Errorf("step %q: creating target download directory %q: %w", step.ID, finalTargetDownloadDir, err)
 		}
 		logger.Info().Str("path", finalTargetDownloadDir).Msg("Ensured target download directory exists")
 	} else {
@@ -155,10 +155,10 @@ func (bar *BrowserAgentRunner) Run() (*types.StepResult, error) {
 		defaultDownloadsDir := filepath.Join(outputDir, fmt.Sprintf("%s_default_downloads", step.ID))
 		absPath, err := filepath.Abs(defaultDownloadsDir)
 		if err != nil {
-			return nil, fmt.Errorf("step %q: failed to get absolute path for default download directory %q: %w", step.ID, defaultDownloadsDir, err)
+			return nil, fmt.Errorf("step %q: getting absolute path for default download directory %q: %w", step.ID, defaultDownloadsDir, err)
 		}
 		if err := os.MkdirAll(absPath, 0755); err != nil {
-			return nil, fmt.Errorf("step %q: failed to create default download directory %q: %w", step.ID, defaultDownloadsDir, err)
+			return nil, fmt.Errorf("step %q: creating default download directory %q: %w", step.ID, defaultDownloadsDir, err)
 		}
 		finalTargetDownloadDir = absPath
 		logger.Debug().Str("path", finalTargetDownloadDir).Msg("No target download directory specified, using default")
@@ -168,13 +168,13 @@ func (bar *BrowserAgentRunner) Run() (*types.StepResult, error) {
 	if step.OutputSchemaFile != "" {
 		schemaFilePath, err := filepath.Abs(step.OutputSchemaFile)
 		if err != nil {
-			return nil, fmt.Errorf("step %q: failed to determine absolute path for output schema file %q: %w", step.ID, step.OutputSchemaFile, err)
+			return nil, fmt.Errorf("step %q: determining absolute path for output schema file %q: %w", step.ID, step.OutputSchemaFile, err)
 		}
 
 		logger.Debug().Str("path", schemaFilePath).Msg("Loading output schema")
 		schemaBytes, err := os.ReadFile(schemaFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("step %q: failed to read output schema file %q: %w", step.ID, schemaFilePath, err)
+			return nil, fmt.Errorf("step %q: reading output schema file %q: %w", step.ID, schemaFilePath, err)
 		}
 
 		if !json.Valid(schemaBytes) {
@@ -187,7 +187,7 @@ func (bar *BrowserAgentRunner) Run() (*types.StepResult, error) {
 	for i, f := range agentStep.UploadFiles {
 		absUploadPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, f.Path)
 		if err != nil {
-			return nil, fmt.Errorf("failed to resolve upload file path %q: %w", f.Path, err)
+			return nil, fmt.Errorf("step %q: resolving upload file path %q: %w", step.ID, f.Path, err)
 		}
 		agentStep.UploadFiles[i].Path = absUploadPath
 	}

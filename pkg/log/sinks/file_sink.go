@@ -32,11 +32,11 @@ func (fs *FileSink) Write(event *log.LogEvent) error {
 
 	data, err := json.Marshal(logEntry)
 	if err != nil {
-		return fmt.Errorf("failed to marshal log event for file sink: %w", err)
+		return fmt.Errorf("marshalling log event for file sink: %w", err)
 	}
 
 	if _, err := fs.file.Write(append(data, '\n')); err != nil {
-		return fmt.Errorf("failed to write to file sink: %w", err)
+		return fmt.Errorf("writing to file sink: %w", err)
 	}
 
 	return nil

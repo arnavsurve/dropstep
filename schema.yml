@@ -3,8 +3,9 @@ description: string # Optional summary of the workflow
 inputs: # Required user inputs
   - name: string
     type: string # string | file | number | boolean
-    required: boolean
-    secret: boolean
+    required: boolean # Optional, defaults to false
+    secret: boolean # Optional, defaults to false
+    default: string # Optional default value for the input
 
 providers: # Optional configurations for external services like LLM providers
   - name: string # A unique, user-defined name for this provider configuration

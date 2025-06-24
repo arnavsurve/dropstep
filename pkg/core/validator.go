@@ -71,8 +71,8 @@ func ValidateWorkflowStructure(wf *Workflow) error {
 func ValidateRequiredInputs(wf *Workflow, varCtx VarContext) error {
 	for _, input := range wf.Inputs {
 		if input.Required {
-			if _, exists := varCtx[input.Name]; !exists {
-				return fmt.Errorf("required input %q is missing from the varfile", input.Name)
+			if _, exists := varCtx[input.Name]; !exists && input.Default == "" {
+				return fmt.Errorf("required input %q is missing from the varfile and no default value is provided", input.Name)
 			}
 		}
 	}
@@ -88,11 +88,11 @@ func ValidateWorkflowRunners(wf *Workflow, workflowDir string) error {
 
 		runner, err := steprunner.GetRunner(ctx)
 		if err != nil {
-			return fmt.Errorf("error getting runner for step %q: %w", step.ID, err)
+			return fmt.Errorf("getting runner for step %q: %w", step.ID, err)
 		}
 
 		if err = runner.Validate(); err != nil {
-			return fmt.Errorf("error validating step %q: %w", step.ID, err)
+			return fmt.Errorf("validating step %q: %w", step.ID, err)
 		}
 	}
 

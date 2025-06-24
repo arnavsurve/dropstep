@@ -38,12 +38,12 @@ func (r *RunCmd) Run() error {
 
 	logsDir := ".dropstep/logs"
 	if err := os.MkdirAll(logsDir, 0755); err != nil {
-		return fmt.Errorf("could not create logs directory %q: %w", logsDir, err)
+		return fmt.Errorf("creating logs directory %q: %w", logsDir, err)
 	}
 	logFilePath := filepath.Join(logsDir, fmt.Sprintf("%s.json", wfRunID))
 	fileSink, err := sinks.NewFileSink(logFilePath)
 	if err != nil {
-		return fmt.Errorf("could not create file log sink: %w", err)
+		return fmt.Errorf("creating file log sink: %w", err)
 	}
 
 	logRouter := log.NewRouter()
@@ -62,28 +62,24 @@ func (r *RunCmd) Run() error {
 		}
 	}()
 
-	// Load .env
 	if err := godotenv.Load(); err != nil {
 		cmdLogger.Warn().Err(err).Msgf("No .env file found or error thrown while loading it. Relying on existing ENV if vars use {{ env.* }}")
 	}
 
-	// Load original workflow YAML
 	wf, err := core.LoadWorkflowFromFile(r.Workflow)
 	if err != nil {
 		cmdLogger.Error().Err(err).Msgf("Failed to load workflow file %s", r.Workflow)
-		return fmt.Errorf("could not load workflow file %q: %w", r.Workflow, err)
+		return fmt.Errorf("loading workflow file %q: %w", r.Workflow, err)
 	}
 	cmdLogger.Info().Msgf("Successfully loaded workflow: %s", wf.Name)
 
-	// Get the workflow directory
 	workflowAbsPath, err := filepath.Abs(r.Workflow)
 	if err != nil {
 		cmdLogger.Error().Err(err).Msgf("Could not determine absolute path for workflow file %s", r.Workflow)
-		return fmt.Errorf("could not determine absolute path for workflow file %q: %w", r.Workflow, err)
+		return fmt.Errorf("determining absolute path for workflow file %q: %w", r.Workflow, err)
 	}
 	workflowDir := filepath.Dir(workflowAbsPath)
 
-	// Load varfile YAML
 	var varCtx core.VarContext
 	if _, statErr := os.Stat(r.Varfile); os.IsNotExist(statErr) {
 		cmdLogger.Warn().Msgf("Varfile %s not found. Proceeding without global variables. Required inputs might fail validation if not in ENV.", r.Varfile)
@@ -97,6 +93,14 @@ func (r *RunCmd) Run() error {
 			}
 		} else {
 			cmdLogger.Info().Msgf("Successfully loaded and resolved varfile: %s", r.Varfile)
+		}
+	}
+
+	// Apply default values for inputs that are not provided in the varfile
+	for _, input := range wf.Inputs {
+		if _, exists := varCtx[input.Name]; !exists && input.Default != "" {
+			cmdLogger.Debug().Msgf("Using default value for input %q", input.Name)
+			varCtx[input.Name] = input.Default
 		}
 	}
 
@@ -115,7 +119,7 @@ func (r *RunCmd) Run() error {
 	for _, p := range wf.Providers {
 		resolvedP, err := core.ResolveProviderVariables(&p, varCtx)
 		if err != nil {
-			return fmt.Errorf("could not resolve variables for provider %q: %w", p.Name, err)
+			return fmt.Errorf("resolving variables for provider %q: %w", p.Name, err)
 		}
 		resolvedProviders[p.Name] = *resolvedP
 	}
@@ -135,22 +139,18 @@ func (r *RunCmd) Run() error {
 		}
 	}
 
-	// Create a temporary, resolved copy of the workflow for validation
 	validationWf, err := core.InjectVarsIntoWorkflow(wf, varCtx)
 	if err != nil {
-		return fmt.Errorf("could not resolve global variables for workflow validation: %w", err)
+		return fmt.Errorf("resolving global variables for workflow validation: %w", err)
 	}
-
-	// Validate runners using the temporary workflow
 	if err := core.ValidateWorkflowRunners(validationWf, workflowDir); err != nil {
-		return fmt.Errorf("workflow runner validation failed: %w", err)
+		return fmt.Errorf("validating workflow runner: %w", err)
 	}
 
 	cmdLogger.Info().Msg("Workflow validation passed")
 
 	cmdLogger.Info().Msgf("Starting workflow: %q (run ID: %s)", wf.Name, wfRunID)
 
-	// Create and use the workflow engine
 	engine := core.NewWorkflowEngine(cmdLogger)
 	_, err = engine.ExecuteWorkflow(wf, varCtx, nil, workflowDir, resolvedProviders)
 	if err != nil {

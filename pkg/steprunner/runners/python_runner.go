@@ -95,7 +95,7 @@ func (pr *PythonRunner) Run() (*types.StepResult, error) {
 	if !isInline {
 		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, step.Command.Path)
 		if err != nil {
-			return nil, fmt.Errorf("error resolving script path: %w", err)
+			return nil, fmt.Errorf("resolving script path: %w", err)
 		}
 		if _, err := os.Stat(resolvedPath); err != nil {
 			return nil, fmt.Errorf("script file not found at %q: %w", resolvedPath, err)
@@ -122,7 +122,7 @@ func (pr *PythonRunner) Run() (*types.StepResult, error) {
 	logger.Info().Str("python", interpreter).Msg("Starting python script execution")
 
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("error executing script: %w", err)
+		return nil, fmt.Errorf("executing script: %w", err)
 	}
 
 	waitErr := cmd.Wait()
@@ -134,20 +134,20 @@ func (pr *PythonRunner) Run() (*types.StepResult, error) {
 		if exitErr, ok := waitErr.(*exec.ExitError); ok {
 			logger.Error().Int("exit_code", exitErr.ExitCode()).Msg("Script exited with non-zero code")
 		}
-		return nil, fmt.Errorf("python script failed: %w", waitErr)
+		return nil, fmt.Errorf("script failed: %w", waitErr)
 	}
 
-	logger.Info().Msg("Python script executed successfully")
+	logger.Info().Msg("Script executed successfully")
 
 	stdout := strings.TrimSpace(stdoutBuf.String())
 	var structuredOutput map[string]any
 
 	if err := json.Unmarshal([]byte(stdout), &structuredOutput); err == nil {
-		logger.Debug().Msg("Python output was valid JSON, promoting to structured output.")
+		logger.Debug().Msg("Output was valid JSON, promoting to structured output.")
 		return &types.StepResult{Output: structuredOutput}, nil
 	}
 
-	logger.Debug().Msg("Python output was not JSON, treating as raw string output.")
+	logger.Debug().Msg("Output was not JSON, treating as raw string output.")
 	return &types.StepResult{Output: stdout}, nil
 }
 
