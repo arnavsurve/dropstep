@@ -27,11 +27,12 @@ func init() {
 			// Create a no-op logger that discards all output
 			nullLogger := log.NewZerologAdapter(zerolog.New(zerolog.Nop()))
 			logger = nullLogger
+			ctx.Logger = nullLogger
 		}
 
 		agentRunner, err := browseragent.NewSubprocessAgentRunner(logger)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("initializing subprocess agent runner: %w", err)
 		}
 		return &BrowserAgentRunner{
 			Agent:   agentRunner,
@@ -68,7 +69,6 @@ func (bar *BrowserAgentRunner) Validate() error {
 			return fmt.Errorf("upload_files[%d] in step %q is missing 'path'", i, step.ID)
 		}
 
-		// Validate file exists
 		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, f.Path)
 		if err != nil {
 			return fmt.Errorf("step %q: resolving upload_files[%d] path %q: %w", step.ID, i, f.Path, err)
