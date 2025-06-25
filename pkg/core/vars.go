@@ -99,12 +99,12 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 
 	// For each file, resolve its path first, then add its `name` as a variable
 	// that resolves to the basename of the path
-	for i, file := range resolvedStep.UploadFiles {
+	for i, file := range resolvedStep.BrowserConfig.UploadFiles {
 		resolvedPath, err := ResolveStringWithContext(file.Path, resolutionCtx, results)
 		if err != nil {
 			return nil, fmt.Errorf("resolving path for file variable %q: %w", file.Name, err)
 		}
-		resolvedStep.UploadFiles[i].Path = resolvedPath
+		resolvedStep.BrowserConfig.UploadFiles[i].Path = resolvedPath
 		resolutionCtx[file.Name] = filepath.Base(resolvedPath)
 	}
 
@@ -114,17 +114,21 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 	}
 
 	// Resolve all string fields in the step
-	resolvedStep.Prompt, err = coreResolver(resolvedStep.Prompt)
+	resolvedStep.BrowserConfig.Prompt, err = coreResolver(resolvedStep.BrowserConfig.Prompt)
 	if err != nil {
-		return nil, fmt.Errorf("resolving prompt for step %q: %w", step.ID, err)
+		return nil, fmt.Errorf("resolving browser.prompt for step %q: %w", step.ID, err)
 	}
-	resolvedStep.TargetDownloadDir, err = coreResolver(resolvedStep.TargetDownloadDir)
+	resolvedStep.BrowserConfig.TargetDownloadDir, err = coreResolver(resolvedStep.BrowserConfig.TargetDownloadDir)
 	if err != nil {
-		return nil, fmt.Errorf("resolving target_download_dir for step %q: %w", step.ID, err)
+		return nil, fmt.Errorf("resolving browser.download_dir for step %q: %w", step.ID, err)
 	}
-	resolvedStep.OutputSchemaFile, err = coreResolver(resolvedStep.OutputSchemaFile)
+	resolvedStep.BrowserConfig.DataDir, err = coreResolver(resolvedStep.BrowserConfig.DataDir)
 	if err != nil {
-		return nil, fmt.Errorf("resolving output_schema for step %q: %w", step.ID, err)
+		return nil, fmt.Errorf("resolving browser.data_dir for step %q: %w", step.ID, err)
+	}
+	resolvedStep.BrowserConfig.OutputSchemaFile, err = coreResolver(resolvedStep.BrowserConfig.OutputSchemaFile)
+	if err != nil {
+		return nil, fmt.Errorf("resolving browser.output_schema for step %q: %w", step.ID, err)
 	}
 
 	if resolvedStep.Command != nil {
@@ -173,24 +177,24 @@ func ResolveStepVariables(step *Step, globals VarContext, results StepResultsCon
 		}
 	}
 
-	for i := range resolvedStep.AllowedDomains {
-		resolvedStep.AllowedDomains[i], err = coreResolver(resolvedStep.AllowedDomains[i])
+	for i := range resolvedStep.BrowserConfig.AllowedDomains {
+		resolvedStep.BrowserConfig.AllowedDomains[i], err = coreResolver(resolvedStep.BrowserConfig.AllowedDomains[i])
 		if err != nil {
-			return nil, fmt.Errorf("resolving allowed_domains[%d] for step %q: %w", i, step.ID, err)
+			return nil, fmt.Errorf("resolving browser.allowed_domains[%d] for step %q: %w", i, step.ID, err)
 		}
 	}
 
 	// MaxSteps and MaxFailures (if they support templating for some reason, usually they are static)
-	if resolvedStep.MaxSteps != nil {
-		maxStepsStr, err := coreResolver(strconv.Itoa(*resolvedStep.MaxSteps))
+	if resolvedStep.BrowserConfig.MaxSteps != nil {
+		maxStepsStr, err := coreResolver(strconv.Itoa(*resolvedStep.BrowserConfig.MaxSteps))
 		if err != nil {
-			return nil, fmt.Errorf("resolving max_steps for step %q: %w", step.ID, err)
+			return nil, fmt.Errorf("resolving browser.max_steps for step %q: %w", step.ID, err)
 		}
 		maxStepsInt, convErr := strconv.Atoi(maxStepsStr)
 		if convErr != nil {
-			return nil, fmt.Errorf("resolved max_steps for step %q (%s) is not an int: %w", step.ID, maxStepsStr, convErr)
+			return nil, fmt.Errorf("resolved browser.max_steps for step %q (%s) is not an int: %w", step.ID, maxStepsStr, convErr)
 		}
-		resolvedStep.MaxSteps = &maxStepsInt
+		resolvedStep.BrowserConfig.MaxSteps = &maxStepsInt
 	}
 
 	// Resolve step.Timeout string
@@ -351,11 +355,12 @@ func InjectVarsIntoWorkflow(wf *Workflow, globalVarCtx VarContext) (*Workflow, e
 
 	for i, step := range updatedWf.Steps {
 		s := step // Work on a copy
-		s.Prompt = resolver(s.Prompt)
-		s.TargetDownloadDir = resolver(s.TargetDownloadDir)
+		s.BrowserConfig.Prompt = resolver(s.BrowserConfig.Prompt)
+		s.BrowserConfig.TargetDownloadDir = resolver(s.BrowserConfig.TargetDownloadDir)
+		s.BrowserConfig.DataDir = resolver(s.BrowserConfig.DataDir)
 
-		for j := range s.UploadFiles {
-			s.UploadFiles[j].Path = resolver(s.UploadFiles[j].Path)
+		for j := range s.BrowserConfig.UploadFiles {
+			s.BrowserConfig.UploadFiles[j].Path = resolver(s.BrowserConfig.UploadFiles[j].Path)
 		}
 
 		if s.Command != nil {

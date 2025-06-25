@@ -76,44 +76,52 @@ func TestShellRunner_Validate(t *testing.T) {
 		{
 			name: "Invalid - has prompt",
 			step: core.Step{
-				ID:      "invalid_step",
-				Prompt:  "Some prompt",
+				ID: "invalid_step",
+				BrowserConfig: core.BrowserConfig{
+					Prompt: "Some prompt",
+				},
 				Command: &core.CommandBlock{Inline: "echo 'hello'"},
 			},
 			shouldError: true,
-			errorMsg:    "must not define 'prompt'",
+			errorMsg:    "must not define 'browser.prompt'",
 		},
 		{
 			name: "Invalid - has upload files",
 			step: core.Step{
 				ID: "invalid_step",
-				UploadFiles: []core.FileToUpload{
-					{Name: "file", Path: "/path"},
+				BrowserConfig: core.BrowserConfig{
+					UploadFiles: []core.FileToUpload{
+						{Name: "file", Path: "/path"},
+					},
 				},
 				Command: &core.CommandBlock{Inline: "echo 'hello'"},
 			},
 			shouldError: true,
-			errorMsg:    "must not define 'upload_files'",
+			errorMsg:    "must not define 'browser.upload_files'",
 		},
 		{
 			name: "Invalid - has download dir",
 			step: core.Step{
-				ID:                "invalid_step",
-				TargetDownloadDir: "/downloads",
-				Command:           &core.CommandBlock{Inline: "echo 'hello'"},
+				ID: "invalid_step",
+				BrowserConfig: core.BrowserConfig{
+					TargetDownloadDir: "/downloads",
+				},
+				Command: &core.CommandBlock{Inline: "echo 'hello'"},
 			},
 			shouldError: true,
-			errorMsg:    "must not define 'download_dir'",
+			errorMsg:    "must not define 'browser.download_dir'",
 		},
 		{
 			name: "Invalid - has output schema",
 			step: core.Step{
-				ID:               "invalid_step",
-				OutputSchemaFile: "/schema.json",
-				Command:          &core.CommandBlock{Inline: "echo 'hello'"},
+				ID: "invalid_step",
+				BrowserConfig: core.BrowserConfig{
+					OutputSchemaFile: "/schema.json",
+				},
+				Command: &core.CommandBlock{Inline: "echo 'hello'"},
 			},
 			shouldError: true,
-			errorMsg:    "must not define 'output_schema'",
+			errorMsg:    "must not define 'browser.output_schema'",
 		},
 		{
 			name: "Invalid - has HTTP call",
@@ -128,22 +136,26 @@ func TestShellRunner_Validate(t *testing.T) {
 		{
 			name: "Invalid - has allowed domains",
 			step: core.Step{
-				ID:             "invalid_step",
-				AllowedDomains: []string{"example.com"},
-				Command:        &core.CommandBlock{Inline: "echo 'hello'"},
+				ID: "invalid_step",
+				BrowserConfig: core.BrowserConfig{
+					AllowedDomains: []string{"example.com"},
+				},
+				Command: &core.CommandBlock{Inline: "echo 'hello'"},
 			},
 			shouldError: true,
-			errorMsg:    "must not define 'allowed_domains'",
+			errorMsg:    "must not define 'browser.allowed_domains'",
 		},
 		{
 			name: "Invalid - has max steps",
 			step: core.Step{
-				ID:       "invalid_step",
-				MaxSteps: func() *int { i := 5; return &i }(),
-				Command:  &core.CommandBlock{Inline: "echo 'hello'"},
+				ID: "invalid_step",
+				BrowserConfig: core.BrowserConfig{
+					MaxSteps: func() *int { i := 5; return &i }(),
+				},
+				Command: &core.CommandBlock{Inline: "echo 'hello'"},
 			},
 			shouldError: true,
-			errorMsg:    "must not define 'max_steps'",
+			errorMsg:    "must not define 'browser.max_steps'",
 		},
 		{
 			name: "Invalid - has max failures",

@@ -53,8 +53,8 @@ func TestFindValueInContext(t *testing.T) {
 	globals := core.VarContext{"url": "https://example.com"}
 	results := core.StepResultsContext{
 		"step1": {
-			Output: map[string]interface{}{
-				"user": map[string]interface{}{"id": 123},
+			Output: map[string]any{
+				"user": map[string]any{"id": 123},
 				"name": "Grace",
 			},
 			OutputFile: "/path/to/step1.txt",
@@ -66,7 +66,7 @@ func TestFindValueInContext(t *testing.T) {
 
 	testCases := []struct {
 		key      string
-		expected interface{}
+		expected any
 		found    bool
 	}{
 		{"url", "https://example.com", true},
@@ -74,7 +74,7 @@ func TestFindValueInContext(t *testing.T) {
 		{"steps.step1.output.name", "Grace", true},
 		{"steps.step1.output_file", "/path/to/step1.txt", true},
 		{"steps.step2.output", "raw string output", true},
-		{"steps.step1.output", map[string]interface{}{"user": map[string]interface{}{"id": 123}, "name": "Grace"}, true},
+		{"steps.step1.output", map[string]any{"user": map[string]any{"id": 123}, "name": "Grace"}, true},
 		{"steps.step2.output.key", nil, false}, // Cannot access key on string
 		{"nonexistent", nil, false},
 		{"steps.nonexistent.output", nil, false},
@@ -102,8 +102,10 @@ func TestResolveStepVariables(t *testing.T) {
 	}
 
 	step := &core.Step{
-		ID:     "current_step",
-		Prompt: "Process user {{ steps.prev_step.output }} from {{ domain }}.",
+		ID: "current_step",
+		BrowserConfig: core.BrowserConfig{
+			Prompt: "Process user {{ steps.prev_step.output }} from {{ domain }}.",
+		},
 		Command: &core.CommandBlock{
 			Inline: "cat {{ steps.prev_step.output_file }}",
 		},
@@ -112,7 +114,7 @@ func TestResolveStepVariables(t *testing.T) {
 	resolved, err := core.ResolveStepVariables(step, globals, results)
 	require.NoError(t, err)
 
-	assert.Equal(t, "Process user user123 from example.com.", resolved.Prompt)
+	assert.Equal(t, "Process user user123 from example.com.", resolved.BrowserConfig.Prompt)
 	assert.Equal(t, "cat /data/prev_output.txt", resolved.Command.Inline)
 }
 
@@ -127,8 +129,8 @@ func TestResolveStringWithContext_Json(t *testing.T) {
 	globals := core.VarContext{"simple": "value"}
 	results := core.StepResultsContext{
 		"json_step": {
-			Output: map[string]interface{}{
-				"nested": map[string]interface{}{
+			Output: map[string]any{
+				"nested": map[string]any{
 					"values": []string{"one", "two"},
 				},
 				"id": 123,
@@ -410,9 +412,9 @@ func TestResolveStepVariables_HttpCall(t *testing.T) {
 	globals := core.VarContext{"base_url": "https://api.example.com"}
 	results := core.StepResultsContext{
 		"auth_step": {
-			Output: map[string]interface{}{
+			Output: map[string]any{
 				"token": "abc123",
-				"user":  map[string]interface{}{"id": 456},
+				"user":  map[string]any{"id": 456},
 			},
 		},
 	}

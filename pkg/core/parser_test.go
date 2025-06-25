@@ -19,8 +19,8 @@ type TestBrowserAgentRunner struct {
 
 func (r *TestBrowserAgentRunner) Validate() error {
 	step := r.ctx.Step
-	if step.Prompt == "" {
-		return fmt.Errorf("browser_agent step %q must define 'prompt'", step.ID)
+	if step.BrowserConfig.Prompt == "" {
+		return fmt.Errorf("browser_agent step %q must define 'browser.prompt'", step.ID)
 	}
 	return nil
 }
@@ -48,9 +48,9 @@ func TestLoadWorkflowFixture(t *testing.T) {
 
 	require.Len(t, injected.Steps, 1)
 	step := injected.Steps[0]
-	assert.Equal(t, "Browse /tmp", step.Prompt)
-	assert.Equal(t, "/tmp/doc.txt", step.UploadFiles[0].Path)
-	assert.Equal(t, "/tmp/dl", step.TargetDownloadDir)
+	assert.Equal(t, "Browse /tmp", step.BrowserConfig.Prompt)
+	assert.Equal(t, "/tmp/doc.txt", step.BrowserConfig.UploadFiles[0].Path)
+	assert.Equal(t, "/tmp/dl", step.BrowserConfig.TargetDownloadDir)
 }
 
 func TestLoadBrokenWorkflowFixture(t *testing.T) {
@@ -67,5 +67,5 @@ func TestLoadBrokenWorkflowFixture(t *testing.T) {
 
 	err = core.ValidateWorkflowRunners(wf, workflowDir)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "must define 'prompt'")
+	assert.Contains(t, err.Error(), "must define 'browser.prompt'")
 }

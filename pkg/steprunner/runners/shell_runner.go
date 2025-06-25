@@ -28,26 +28,26 @@ func init() {
 func (sr *ShellRunner) Validate() error {
 	step := sr.StepCtx.Step
 
-	if step.Prompt != "" {
-		return fmt.Errorf("shell step %q must not define 'prompt'", step.ID)
+	if step.BrowserConfig.Prompt != "" {
+		return fmt.Errorf("shell step %q must not define 'browser.prompt'", step.ID)
 	}
-	if step.UploadFiles != nil {
-		return fmt.Errorf("shell step %q must not define 'upload_files'", step.ID)
+	if step.BrowserConfig.UploadFiles != nil {
+		return fmt.Errorf("shell step %q must not define 'browser.upload_files'", step.ID)
 	}
-	if step.TargetDownloadDir != "" {
-		return fmt.Errorf("shell step %q must not define 'download_dir'", step.ID)
+	if step.BrowserConfig.TargetDownloadDir != "" {
+		return fmt.Errorf("shell step %q must not define 'browser.download_dir'", step.ID)
 	}
-	if step.OutputSchemaFile != "" {
-		return fmt.Errorf("shell step %q must not define 'output_schema'", step.ID)
+	if step.BrowserConfig.OutputSchemaFile != "" {
+		return fmt.Errorf("shell step %q must not define 'browser.output_schema'", step.ID)
 	}
 	if step.Call != nil {
 		return fmt.Errorf("shell step %q must not define 'call'", step.ID)
 	}
-	if step.AllowedDomains != nil {
-		return fmt.Errorf("shell step %q must not define 'allowed_domains'", step.ID)
+	if step.BrowserConfig.AllowedDomains != nil {
+		return fmt.Errorf("shell step %q must not define 'browser.allowed_domains'", step.ID)
 	}
-	if step.MaxSteps != nil {
-		return fmt.Errorf("shell step %q must not define 'max_steps'", step.ID)
+	if step.BrowserConfig.MaxSteps != nil {
+		return fmt.Errorf("shell step %q must not define 'browser.max_steps'", step.ID)
 	}
 	if step.MaxFailures != nil {
 		return fmt.Errorf("shell step %q must not define 'max_failures'", step.ID)

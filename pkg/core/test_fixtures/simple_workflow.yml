@@ -7,9 +7,10 @@ inputs:
 steps:
   - id: step1
     uses: browser_agent
-    prompt: "Browse {{dir}}"
-    upload_files:
-      - name: doc
-        path: "{{dir}}/doc.txt"
-    download_dir: "{{dir}}/dl"
-    output_schema: "schemas/output.json"
+    browser:
+      prompt: "Browse {{dir}}"
+      upload_files:
+        - name: doc
+          path: "{{dir}}/doc.txt"
+      download_dir: "{{dir}}/dl"
+      output_schema: "schemas/output.json"

@@ -183,10 +183,10 @@ func (s *SubprocessAgentRunner) RunAgent(
 	}
 	logger.Debug().Str("path", outputPath).Msg("Resolved path for agent output")
 
-	cmdArgs := []string{"--prompt", step.Prompt, "--out", outputPath}
-	if len(step.UploadFiles) > 0 {
+	cmdArgs := []string{"--prompt", step.BrowserConfig.Prompt, "--out", outputPath}
+	if len(step.BrowserConfig.UploadFiles) > 0 {
 		cmdArgs = append(cmdArgs, "--upload-file-paths")
-		for _, f := range step.UploadFiles {
+		for _, f := range step.BrowserConfig.UploadFiles {
 			absPath, err := filepath.Abs(f.Path)
 			if err != nil {
 				return nil, fmt.Errorf("getting abs path for upload %s: %w", f.Path, err)
@@ -202,12 +202,15 @@ func (s *SubprocessAgentRunner) RunAgent(
 	} else {
 		cmdArgs = append(cmdArgs, "--target-download-dir", "./output/")
 	}
-	if step.AllowedDomains != nil {
-		cmdArgs = append(cmdArgs, "--allowed-domains")
-		cmdArgs = append(cmdArgs, step.AllowedDomains...)
+	if step.BrowserConfig.DataDir != "" {
+		cmdArgs = append(cmdArgs, "--data-dir", step.BrowserConfig.DataDir)
 	}
-	if step.MaxSteps != nil {
-		cmdArgs = append(cmdArgs, "--max-steps", strconv.Itoa(*step.MaxSteps))
+	if step.BrowserConfig.AllowedDomains != nil {
+		cmdArgs = append(cmdArgs, "--allowed-domains")
+		cmdArgs = append(cmdArgs, step.BrowserConfig.AllowedDomains...)
+	}
+	if step.BrowserConfig.MaxSteps != nil {
+		cmdArgs = append(cmdArgs, "--max-steps", strconv.Itoa(*step.BrowserConfig.MaxSteps))
 	}
 	if step.MaxFailures != nil {
 		cmdArgs = append(cmdArgs, "--max-failures", strconv.Itoa(*step.MaxFailures))

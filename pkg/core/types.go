@@ -32,6 +32,8 @@ type HTTPCall = types.HTTPCall
 
 type FileToUpload = types.FileToUpload
 
+type BrowserConfig = types.BrowserConfig
+
 type CommandBlock = types.CommandBlock
 
 type ExecutionContext = types.ExecutionContext
@@ -55,12 +57,15 @@ type Field struct {
 func String(key, val string) Field {
 	return Field{key, val}
 }
+
 func Int(key string, val int) Field {
 	return Field{key, val}
 }
+
 func Error(err error) Field {
 	return Field{"error", err.Error()}
 }
+
 func Any(key string, val any) Field {
 	return Field{key, val}
 }

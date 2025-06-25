@@ -1,0 +1,86 @@
+name: Automated Job Application
+description: A workflow to automatically apply for jobs using a browser agent
+
+inputs:
+  - name: resume_path
+    type: file
+    required: true
+
+  - name: gmail_email
+    type: string
+    required: true
+    secret: true
+
+  - name: gmail_pass
+    type: string
+    required: true
+    secret: true
+
+  - name: openai_api_key
+    type: string
+    required: true
+    secret: true
+
+providers:
+  - name: openai
+    type: openai
+    api_key: "{{ openai_api_key }}"
+
+steps:
+  - id: apply_for_job
+    uses: browser_agent
+    provider: openai
+    browser:
+      # data_dir: "~/Library/Application Support/Google/Chrome"
+      prompt: |
+        Go to LinkedIn and apply for SWE Intern or adjacent jobs. 
+
+        My personal information:
+        - Name: Arnav Surve
+        - Email: arnav@surve.dev
+        - Phone: 9164729444
+        - LinkedIn: https://www.linkedin.com/in/arnavsurve
+        - Years of Experience: 4
+        - Education: B.S. Computer Science (not yet graduated)
+        - Skills: 
+            Languages: Python, Go, PostgreSQL, MySQL, Javascript, HTML/CSS, Java
+            Frameworks: Echo, GORM, FastAPI, SQLAlchemy, Pydantic, Pytest, React, Node.js, Next.js, Agile Scrum
+            Tools: Git, GitHub, Vim, AWS, Docker, Redis, Prometheus, Grafana
+            Related: Debian/RHELinux, Software Engineering, DevOps, Distributed Systems, Cloud Computing, Version Control,
+            Documentation, Testing, Back-End, Full-Stack
+        - Experience:
+            IT Infrastructure Intern June 2024 – Aug. 2024
+            MITER Brands – Milgard Manufacturing Tacoma, WA
+            • Delivered a comprehensive proposal to optimize monitoring pipelines, reducing average alert redundancy by 60%
+            • Cross-communicated between 6 teams across 2 business units to gather insights and consensus on optimization initiative.
+            • Developed monitors for REST API endpoints, identifying discrepancies resulting in an 85% decrease in latencies.
+            • Analyzed monitoring groups, escalation policies, and alert thresholds to address tech debt and improve efficiency by 20%.
+            • Automated compliance audits for Active Directory controlled accounts using PowerShell scripting.
+            Undergraduate Research Assistant NASA California Space Grant Consortium March 2024 - May 2024
+            Sacramento, CA
+            • Constructed an infrasound frequency monitor using Raspberry Pi, enabling real-time aggregation of seismic and
+            atmospheric activity with a 95% uptime in deployment.
+            • Implemented k-means clustering and autoencoder neural networks using scikit-learn and Tensorflow on over 25 million
+            data points, predicting volcanic activity with a silhouette score of 0.47.
+            Software Engineer Aug. 2022 – May 2023
+            Purdue University Office of Engagement West Lafayette, IN
+            • Worked in a 10 person team using Agile Scrum, delivering a full stack web app for research grant applications.
+            • Developed RESTful API endpoints using Express.js to enable CRUD functionality and authentication.
+            • Implemented federated session authentication using Purdue University in-house Single Sign-On APIs.
+            • Architected and implemented a PostgreSQL database using Prisma ORM to handle user PII and grant applications.
+            • Utilized Docker for containerization and delivery of application to university server cluster.
+        
+        Upload my resume {{ resume }} when prompted. If there's a separate field for a cover letter, first identify
+        whether this is a textinput where you can write. In that case, write a custom cover letter with
+        minimal fluff based on my skills and experience tailored to the position. If this requires a file upload
+        for the CV, check if it's optional. If optional, don't submit a cover letter. If a CV is required, and 
+        also requires a file upload for the CV, move on to a different job application.
+        
+        Complete all required fields and submit the application. If there are any questions 
+        about my willingness to relocate or work authorization, I am willing to relocate anywhere in North America.
+        I am authorized to work in North America.
+      upload_files:
+        - name: resume
+          path: "{{ resume_path }}"
+      download_dir: "./job_applications/downloads/"
+      max_failures: 5

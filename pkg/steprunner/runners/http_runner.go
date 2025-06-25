@@ -52,29 +52,29 @@ func (hr *HttpRunner) Validate() error {
 		return fmt.Errorf("http step %q: 'call.url' is required", step.ID)
 	}
 
-	if step.Prompt != "" {
-		return fmt.Errorf("http step %q must not define 'prompt'", step.ID)
+	if step.BrowserConfig.Prompt != "" {
+		return fmt.Errorf("http step %q must not define 'browser.prompt'", step.ID)
 	}
 	if step.Command != nil {
 		return fmt.Errorf("http step %q must not define 'run'", step.ID)
 	}
-	if step.UploadFiles != nil {
-		return fmt.Errorf("http step %q must not define 'upload_files'", step.ID)
+	if step.BrowserConfig.UploadFiles != nil {
+		return fmt.Errorf("http step %q must not define 'browser.upload_files'", step.ID)
 	}
-	if step.TargetDownloadDir != "" {
-		return fmt.Errorf("http step %q must not define 'download_dir'", step.ID)
+	if step.BrowserConfig.TargetDownloadDir != "" {
+		return fmt.Errorf("http step %q must not define 'browser.download_dir'", step.ID)
 	}
-	if step.OutputSchemaFile != "" {
-		return fmt.Errorf("http step %q must not define 'output_schema'", step.ID)
+	if step.BrowserConfig.OutputSchemaFile != "" {
+		return fmt.Errorf("http step %q must not define 'browser.output_schema'", step.ID)
 	}
 	if step.Provider != "" {
 		return fmt.Errorf("http step %q must not define 'provider'", step.ID)
 	}
-	if step.AllowedDomains != nil {
-		return fmt.Errorf("http step %q must not define 'allowed_domains'", step.ID)
+	if step.BrowserConfig.AllowedDomains != nil {
+		return fmt.Errorf("http step %q must not define 'browser.allowed_domains'", step.ID)
 	}
-	if step.MaxSteps != nil {
-		return fmt.Errorf("http step %q must not define 'max_steps'", step.ID)
+	if step.BrowserConfig.MaxSteps != nil {
+		return fmt.Errorf("http step %q must not define 'browser.max_steps'", step.ID)
 	}
 	if step.MaxFailures != nil {
 		return fmt.Errorf("http step %q must not define 'max_failures'", step.ID)

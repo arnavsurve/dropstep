@@ -46,8 +46,8 @@ func (bar *BrowserAgentRunner) Validate() error {
 	logger := bar.StepCtx.Logger
 	workflowDir := bar.StepCtx.WorkflowDir
 
-	if step.Prompt == "" {
-		return fmt.Errorf("browser_agent step %q must define 'prompt'", step.ID)
+	if step.BrowserConfig.Prompt == "" {
+		return fmt.Errorf("browser_agent step %q must define 'browser.prompt'", step.ID)
 	}
 
 	if step.Provider == "" {
@@ -61,58 +61,58 @@ func (bar *BrowserAgentRunner) Validate() error {
 		return fmt.Errorf("browser_agent step %q must not define 'call'", step.ID)
 	}
 
-	for i, f := range step.UploadFiles {
+	for i, f := range step.BrowserConfig.UploadFiles {
 		if f.Name == "" {
-			return fmt.Errorf("upload_files[%d] in step %q is missing 'name'", i, step.ID)
+			return fmt.Errorf("browser.upload_files[%d] in step %q is missing 'name'", i, step.ID)
 		}
 		if f.Path == "" {
-			return fmt.Errorf("upload_files[%d] in step %q is missing 'path'", i, step.ID)
+			return fmt.Errorf("browser.upload_files[%d] in step %q is missing 'path'", i, step.ID)
 		}
 
 		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, f.Path)
 		if err != nil {
-			return fmt.Errorf("step %q: resolving upload_files[%d] path %q: %w", step.ID, i, f.Path, err)
+			return fmt.Errorf("step %q: resolving browser.upload_files[%d] path %q: %w", step.ID, i, f.Path, err)
 		}
 		if _, err := os.Stat(resolvedPath); err != nil {
-			return fmt.Errorf("step %q: upload_files[%d] file not found at path %q: %w", step.ID, i, resolvedPath, err)
+			return fmt.Errorf("step %q: browser.upload_files[%d] file not found at path %q: %w", step.ID, i, resolvedPath, err)
 		}
 	}
 
-	if step.OutputSchemaFile != "" {
-		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, step.OutputSchemaFile)
+	if step.BrowserConfig.OutputSchemaFile != "" {
+		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, step.BrowserConfig.OutputSchemaFile)
 		if err != nil {
-			return fmt.Errorf("step %q: resolving output_schema path %q: %w", step.ID, step.OutputSchemaFile, err)
+			return fmt.Errorf("step %q: resolving browser.output_schema path %q: %w", step.ID, step.BrowserConfig.OutputSchemaFile, err)
 		}
 		if _, err := os.Stat(resolvedPath); err != nil {
-			return fmt.Errorf("step %q: output_schema file not found at path %q", step.ID, resolvedPath)
+			return fmt.Errorf("step %q: browser.output_schema file not found at path %q", step.ID, resolvedPath)
 		}
 	}
 
-	if step.TargetDownloadDir != "" {
-		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, step.TargetDownloadDir)
+	if step.BrowserConfig.TargetDownloadDir != "" {
+		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, step.BrowserConfig.TargetDownloadDir)
 		if err != nil {
-			return fmt.Errorf("step %q: resolving download_dir path %q: %w", step.ID, step.TargetDownloadDir, err)
+			return fmt.Errorf("step %q: resolving browser.download_dir path %q: %w", step.ID, step.BrowserConfig.TargetDownloadDir, err)
 		}
 		if _, err := os.Stat(resolvedPath); err != nil {
 			if os.IsNotExist(err) {
 				logger.Warn().Str("path", resolvedPath).Msg("Download directory does not exist yet, will attempt to create at runtime")
 			} else {
-				return fmt.Errorf("step %q: checking download_dir path %q: %w", step.ID, resolvedPath, err)
+				return fmt.Errorf("step %q: checking browser.download_dir path %q: %w", step.ID, resolvedPath, err)
 			}
 		}
 	}
 
-	for i, domain := range step.AllowedDomains {
+	for i, domain := range step.BrowserConfig.AllowedDomains {
 		if domain == "" {
-			return fmt.Errorf("step %q: allowed_domains[%d] must not be an empty string", step.ID, i)
+			return fmt.Errorf("step %q: browser.allowed_domains[%d] must not be an empty string", step.ID, i)
 		}
 	}
 
-	if step.MaxSteps == nil {
+	if step.BrowserConfig.MaxSteps == nil {
 		// If MaxSteps is not defined, no need to validate
 		// Default value is handled in the Python subprocess
-	} else if *step.MaxSteps <= 0 {
-		return fmt.Errorf("step %q: max_steps must be greater than 0", step.ID)
+	} else if *step.BrowserConfig.MaxSteps <= 0 {
+		return fmt.Errorf("step %q: browser.max_steps must be greater than 0", step.ID)
 	}
 
 	if step.MaxFailures == nil {
@@ -140,10 +140,10 @@ func (bar *BrowserAgentRunner) Run() (*types.StepResult, error) {
 	}
 
 	var finalTargetDownloadDir string
-	if step.TargetDownloadDir != "" {
-		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, step.TargetDownloadDir)
+	if step.BrowserConfig.TargetDownloadDir != "" {
+		resolvedPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, step.BrowserConfig.TargetDownloadDir)
 		if err != nil {
-			return nil, fmt.Errorf("step %q: resolving target_download_dir %q: %w", step.ID, step.TargetDownloadDir, err)
+			return nil, fmt.Errorf("step %q: resolving target_download_dir %q: %w", step.ID, step.BrowserConfig.TargetDownloadDir, err)
 		}
 		finalTargetDownloadDir = resolvedPath
 		if err := os.MkdirAll(finalTargetDownloadDir, 0755); err != nil {
@@ -165,10 +165,10 @@ func (bar *BrowserAgentRunner) Run() (*types.StepResult, error) {
 	}
 
 	var outputSchemaJSONString string
-	if step.OutputSchemaFile != "" {
-		schemaFilePath, err := filepath.Abs(step.OutputSchemaFile)
+	if step.BrowserConfig.OutputSchemaFile != "" {
+		schemaFilePath, err := filepath.Abs(step.BrowserConfig.OutputSchemaFile)
 		if err != nil {
-			return nil, fmt.Errorf("step %q: determining absolute path for output schema file %q: %w", step.ID, step.OutputSchemaFile, err)
+			return nil, fmt.Errorf("step %q: determining absolute path for output schema file %q: %w", step.ID, step.BrowserConfig.OutputSchemaFile, err)
 		}
 
 		logger.Debug().Str("path", schemaFilePath).Msg("Loading output schema")
@@ -184,12 +184,12 @@ func (bar *BrowserAgentRunner) Run() (*types.StepResult, error) {
 	}
 
 	agentStep := step
-	for i, f := range agentStep.UploadFiles {
+	for i, f := range agentStep.BrowserConfig.UploadFiles {
 		absUploadPath, err := fileutil.ResolvePathFromWorkflow(workflowDir, f.Path)
 		if err != nil {
 			return nil, fmt.Errorf("step %q: resolving upload file path %q: %w", step.ID, f.Path, err)
 		}
-		agentStep.UploadFiles[i].Path = absUploadPath
+		agentStep.BrowserConfig.UploadFiles[i].Path = absUploadPath
 	}
 
 	agentOutputPath := fmt.Sprintf("output/%s_output.json", step.ID)

@@ -11,13 +11,15 @@ import settings
 
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel as PydanticBaseModel
-from browser_use import Agent, BrowserSession, Controller, BrowserProfile
+from browser_use import Agent, BrowserSession, Controller
+
 
 async def run_agent_logic():
     args = cli.parse_agent_args()
 
-    print(f"PYTHON MAIN: args.target_download_dir received from CLI: {args.target_download_dir}")
-    browser_profile_obj = settings.create_browser_profile(args.target_download_dir, user_data_dir=None)
+    browser_profile_obj = settings.create_browser_profile(
+        args.target_download_dir, user_data_dir=args.data_dir
+    )
 
     settings.load_environment()
 
@@ -28,21 +30,21 @@ async def run_agent_logic():
             output_model_class = models.get_pydantic_model_from_schema(
                 args.output_schema, args.model_name
             )
-            if not output_model_class: # get_pydantic_model_from_schema returns Summary on failure
-                output_model_class = models.Summary
             print(f"Using output model: {output_model_class.__name__}")
         except json.JSONDecodeError as e:
-            print(f"Error: --output-schema is not valid JSON: {e}. Defaulting to Summary.")
+            print(
+                f"Error: --output-schema is not valid JSON: {e}. Defaulting to Summary."
+            )
             output_model_class = models.Summary
         except Exception as e:
             print(f"Error processing output schema: {e}. Defaulting to Summary.")
             output_model_class = models.Summary
-    
+
     controller = Controller(output_model=output_model_class)
 
-    controller.action(
-        "Uploads a file from the host system..."
-    )(actions.upload_file_action_impl)
+    controller.action("Uploads a file from the host system...")(
+        actions.upload_file_action_impl
+    )
     controller.action(
         "Retrieves information about the most recently downloaded file..."
     )(actions.get_last_downloaded_file_info_impl)
@@ -69,7 +71,7 @@ async def run_agent_logic():
         browser_session_args["allowed_domains"] = args.allowed_domains
         print(f"Restricting navigation to domains: {args.allowed_domains}")
 
-    browser_session = BrowserSession(**browser_session_args) 
+    browser_session = BrowserSession(**browser_session_args)
 
     extend_system_message = """
     When clicking on an element, default to the force_click_element_impl action. If that fails, use the click_element_by_index action.
@@ -104,20 +106,25 @@ async def run_agent_logic():
                     print(f"Warning: os.fsync error on {output_file_path}: {e_fsync}")
             print(f"Wrote result to {args.out}")
         else:
-            print(f"ERROR: Agent did not produce a final JSON result. Output to {args.out} skipped.")
+            print(
+                f"ERROR: Agent did not produce a final JSON result. Output to {args.out} skipped."
+            )
     except Exception as e:
         print(f"Error during agent run: {type(e).__name__}: {e}")
     finally:
         print("Done!")
         try:
-            if browser_session and hasattr(browser_session, 'stop'):
+            if browser_session and hasattr(browser_session, "stop"):
                 print("Attempting to stop browser session...")
                 await browser_session.stop()
                 print("Browser session stopped.")
         except AttributeError:
-            print("Browser session object or stop method not as expected or already closed.")
+            print(
+                "Browser session object or stop method not as expected or already closed."
+            )
         except Exception as e_stop:
             print(f"Error stopping browser session: {e_stop}")
+
 
 if __name__ == "__main__":
     asyncio.run(run_agent_logic())
