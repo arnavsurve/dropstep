@@ -17,15 +17,15 @@ steps: # Ordered list of steps
     uses: string # 'browser_agent' | 'shell' | 'python' | 'api'
     provider: string # (if uses: browser_agent) The name of the provider to use for this step
 
-    prompt: string # (if uses: browser_agent) prompt template
-    upload_files: # (if uses: browser_agent) files to upload
-      - name: string
-        path: string
-    download_dir: string # (if uses: browser_agent) path to target download directory
-    output_schema: string # (if uses: browser_agent) JSON schema for LLM structured output
-    allowed_domains: [string] # (if uses: browser_agent) optional list of allowed domains for the agent's navigation
-    max_steps: int # (if uses: browser_agent) optional number of max steps an agent can take. Helps control execution times and prevent infinite loops. Default 100
-    max_failures: int # (if uses: browser_agent) optional number of max failures an agent can incur. Helps control execution times and prevent infinite loops. Default 3
+    browser: # (if uses: browser_agent)
+      prompt: string # prompt for the agent
+      upload_files: # files to upload
+        - name: string
+          path: string
+      download_dir: string # path to target download directory
+      output_schema: string # JSON schema for LLM structured output
+      allowed_domains: [string] # optional list of allowed domains for the agent's navigation
+      max_steps: int # optional number of max steps an agent can take. Helps control execution times and prevent infinite loops. Default 100
 
     run: # (if uses: shell/python)
       path: string # path to script file
@@ -41,3 +41,4 @@ steps: # Ordered list of steps
     if: string # Optional condition (future: templated eval)
     retry: int # Optional retries
     timeout: duration # Optional per-step timeout (e.g. 30s)
+    max_failures: int # optional number of max failures a step can incur. Helps control execution times and prevent infinite loops. Default 3
