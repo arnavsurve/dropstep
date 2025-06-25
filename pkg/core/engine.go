@@ -47,6 +47,9 @@ func (e *WorkflowEngine) ExecuteWorkflow(
 		}
 
 		if resolvedStep.Uses == "browser_agent" {
+			if resolvedStep.Provider == "" {
+				return stepResults, fmt.Errorf("step %q uses 'browser_agent' but has an empty provider", resolvedStep.ID)
+			}
 			providerConf, found := resolvedProviders[resolvedStep.Provider]
 			if !found {
 				return stepResults, fmt.Errorf("step %q references provider %q, which is not defined in providers", resolvedStep.ID, resolvedStep.Provider)
@@ -60,6 +63,7 @@ func (e *WorkflowEngine) ExecuteWorkflow(
 
 		runner, err := steprunner.GetRunner(execCtx)
 		if err != nil {
+			scopedLogger.Error().Err(err).Msgf("Failed to get runner for step %q (uses=%s)", resolvedStep.ID, resolvedStep.Uses)
 			return stepResults, fmt.Errorf("getting runner for step %q: %w", resolvedStep.ID, err)
 		}
 
