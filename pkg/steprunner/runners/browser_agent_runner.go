@@ -130,7 +130,7 @@ func (bar *BrowserAgentRunner) Run() (*types.StepResult, error) {
 	logger := bar.StepCtx.Logger
 	workflowDir := bar.StepCtx.WorkflowDir
 
-	outputDir := "output"
+	outputDir := ".dropstep/output"
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		logger.Error().
 			Err(err).
@@ -192,7 +192,7 @@ func (bar *BrowserAgentRunner) Run() (*types.StepResult, error) {
 		agentStep.BrowserConfig.UploadFiles[i].Path = absUploadPath
 	}
 
-	agentOutputPath := fmt.Sprintf("output/%s_output.json", step.ID)
+	agentOutputPath := fmt.Sprintf(".dropstep/output/%s_output.json", step.ID)
 	jsonData, runErr := bar.Agent.RunAgent(
 		agentStep,
 		agentOutputPath,
