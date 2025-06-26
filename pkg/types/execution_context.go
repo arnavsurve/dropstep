@@ -20,7 +20,7 @@ type Step struct {
 	Timeout       string        `yaml:"timeout,omitempty"`
 }
 
-// CommandBlock represents a shell command to run
+// CommandBlock represents a shell or python script to run
 type CommandBlock struct {
 	Path        string `yaml:"path"`
 	Inline      string `yaml:"inline"`
