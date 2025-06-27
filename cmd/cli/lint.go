@@ -74,6 +74,15 @@ func (l *LintCmd) Run() error {
 	}
 	cmdLogger.Info().Msgf("Required input validation passed")
 
+	cmdLogger.Info().Msgf("Validating providers...")
+	for _, p := range wf.Providers {
+		if _, err := core.ResolveProviderVariables(&p, varCtx); err != nil {
+			cmdLogger.Error().Err(err).Msgf("Provider %q has a configuration issue", p.Name)
+			return fmt.Errorf("resolving variables for provider %q: %w", p.Name, err)
+		}
+	}
+	cmdLogger.Info().Msgf("Provider validation passed")
+
 	validationWf, err := core.InjectVarsIntoWorkflow(wf, varCtx)
 	if err != nil {
 		cmdLogger.Error().Err(err).Msg("Could not resolve global variables for workflow validation")

@@ -14,7 +14,7 @@ providers: # Optional configurations for external services like LLM providers
 
 steps: # Ordered list of steps
   - id: string # Unique step ID
-    uses: string # 'browser_agent' | 'shell' | 'python' | 'api'
+    uses: string # 'browser_agent' | 'shell' | 'python' | 'http'
     provider: string # (if uses: browser_agent) The name of the provider to use for this step
 
     browser: # (if uses: browser_agent)
@@ -32,7 +32,7 @@ steps: # Ordered list of steps
       inline: string # inline script content
       interpreter: string # /bin/sh, /bin/bash, ./venv/bin/python3, etc.
 
-    call: # (if uses: api)
+    call: # (if uses: http)
       method: string # GET, POST, etc.
       url: string
       headers: map

@@ -1,0 +1,8 @@
+name: Bad Step Causing Lint Failure
+
+steps:
+  - id: bad_step
+    uses: shell
+    run:
+      inline: "echo 'hello'"
+      path: "./my_script.sh" # ERROR: Cannot have both inline and path
