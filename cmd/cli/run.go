@@ -119,6 +119,7 @@ func (r *RunCmd) Run() error {
 	for _, p := range wf.Providers {
 		resolvedP, err := core.ResolveProviderVariables(&p, varCtx)
 		if err != nil {
+			cmdLogger.Error().Err(err).Msgf("Failed to resolve variables for provider %q", p.Name)
 			return fmt.Errorf("resolving variables for provider %q: %w", p.Name, err)
 		}
 		resolvedProviders[p.Name] = *resolvedP
@@ -141,9 +142,11 @@ func (r *RunCmd) Run() error {
 
 	validationWf, err := core.InjectVarsIntoWorkflow(wf, varCtx)
 	if err != nil {
+		cmdLogger.Error().Err(err).Msg("Failed to resolve global variables for workflow validation")
 		return fmt.Errorf("resolving global variables for workflow validation: %w", err)
 	}
 	if err := core.ValidateWorkflowRunners(validationWf, workflowDir); err != nil {
+		cmdLogger.Error().Err(err).Msg("Workflow runner validation failed")
 		return fmt.Errorf("validating workflow runner: %w", err)
 	}
 

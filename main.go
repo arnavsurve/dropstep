@@ -5,7 +5,6 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/arnavsurve/dropstep/cmd/cli"
-	"github.com/rs/zerolog/log"
 )
 
 var CLI struct {
@@ -20,7 +19,8 @@ func main() {
 	)
 
 	if err := ctx.Run(); err != nil {
-		log.Error().Err(err).Msg("Command execution failed")
+		// Error is already logged by commands internally
+		// Logging here causes the final error log to be omitted from the logging sink implementation
 		os.Exit(1)
 	}
 }
