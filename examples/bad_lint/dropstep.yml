@@ -5,4 +5,4 @@ steps:
     uses: shell
     run:
       inline: "echo 'hello'"
-      path: "./my_script.sh" # ERROR: Cannot have both inline and path
+      # path: "./my_script.sh" # ERROR: Cannot have both inline and path

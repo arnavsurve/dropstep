@@ -54,6 +54,10 @@ func (r *RunCmd) Run() error {
 	baseZerologInstance := zerolog.New(routerWriter).With().Timestamp().Logger()
 	cmdLogger := log.NewZerologAdapter(baseZerologInstance)
 
+	// Log the run ID early
+	cmdLogger.Info().Msgf("Starting workflow run with ID: %s", wfRunID)
+	cmdLogger.Info().Msgf("Logs will be saved to %q", logFilePath)
+
 	// Graceful shutdown of logging sinks
 	defer func() {
 		cmdLogger.Info().Msg("Shutting down logger...")
@@ -71,7 +75,7 @@ func (r *RunCmd) Run() error {
 		cmdLogger.Error().Err(err).Msgf("Failed to load workflow file %s", r.Workflow)
 		return fmt.Errorf("loading workflow file %q: %w", r.Workflow, err)
 	}
-	cmdLogger.Info().Msgf("Successfully loaded workflow: %s", wf.Name)
+	cmdLogger.Info().Msgf("Successfully loaded workflow: %q", wf.Name)
 
 	workflowAbsPath, err := filepath.Abs(r.Workflow)
 	if err != nil {
@@ -152,7 +156,7 @@ func (r *RunCmd) Run() error {
 
 	cmdLogger.Info().Msg("Workflow validation passed")
 
-	cmdLogger.Info().Msgf("Starting workflow: %q (run ID: %s)", wf.Name, wfRunID)
+	cmdLogger.Info().Msgf("Executing workflow: %q", wf.Name)
 
 	engine := core.NewWorkflowEngine(cmdLogger)
 	_, err = engine.ExecuteWorkflow(wf, varCtx, nil, workflowDir, resolvedProviders)
